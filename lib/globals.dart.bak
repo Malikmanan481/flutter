@@ -1,0 +1,110 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speedotrack/bloc/home_bloc.dart';
+import 'package:speedotrack/bloc/notification_bloc.dart';
+import 'package:video_player/video_player.dart';
+
+class Globals {
+  static SharedPreferences? prefs;
+  static bool canUpdate = false, isLoggedIn = false;
+  static VideoPlayerController? controllerVideo;
+  static List<String> imeiArray = [];
+  static HomeBloc? homeBloc;
+  static NotificationBloc? notificationBloc;
+  static bool dataLoaded = false;
+  static bool fetchedLogin = false;
+  static bool fetchedSettings = false;
+  static bool fetchedObject = false;
+
+  //1. WhiteLabeling values start here
+  // static String name = 'Speedotrack';=
+  static String name = 'infinity';
+  static Color appColor = Color(0xff00ac3c);
+  static String baseUrl = 'http://peace.carminetracking.com'; //shoaib,pakistan1122
+
+  static String websiteChatBot = '';
+  static String whatsapp = '923016122983';
+  static String mobileNumber = '+923016122983';
+  static String hotLineNumberWithCode = '+923016122983';
+  static String email = 'mananmalik481@gmail.com';
+  // static String whatsapp = '';
+  // static String mobileNumber = '+';
+  // static String hotLineNumberWithCode = '+';
+  // static String email = '';
+  static String payNow = '';
+  static String pricing = '';
+  static String demoUsername = 'demo';
+  static String demoPassword = 'demo123';
+
+//2. Replace Google Maps Api in the Android Manifest File
+
+//3. Replace images in the images folder and appIcon in the mipmap folder.
+//4. Change About Us
+
+  // ==========================================
+  // TRACCAR API BACKEND INTEGRATION
+  // ==========================================
+
+  /// Active Traccar Session Cookie & User Auth State
+  static String? sessionCookie;
+  static int? userId;
+  static String? userToken;
+
+  /// Cleaned Base URL for API Calls
+  static String get apiBaseUrl {
+    final url = prefs?.getString('traccar_base_url') ?? baseUrl;
+    return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+  }
+
+  /// Dynamic Traccar WebSocket Connection URL (`/api/socket`)
+  static String get webSocketUrl {
+    final cleanUrl = apiBaseUrl;
+    final wsScheme = cleanUrl.startsWith('https') ? 'wss://' : 'ws://';
+    final host = cleanUrl.replaceFirst(RegExp(r'https?://'), '');
+    return '$wsScheme$host/api/socket';
+  }
+
+  // --- Traccar REST API Endpoints ---
+  static String get apiSession => '$apiBaseUrl/api/session';
+  static String get apiSessionToken => '$apiBaseUrl/api/session/token';
+  static String get apiDevices => '$apiBaseUrl/api/devices';
+  static String get apiPositions => '$apiBaseUrl/api/positions';
+  static String get apiServer => '$apiBaseUrl/api/server';
+  static String get apiEvents => '$apiBaseUrl/api/events';
+  static String get apiGeofences => '$apiBaseUrl/api/geofences';
+  static String get apiCommands => '$apiBaseUrl/api/commands';
+  static String get apiCommandsSend => '$apiBaseUrl/api/commands/send';
+  static String get apiNotifications => '$apiBaseUrl/api/notifications';
+  static String get apiReportsRoute => '$apiBaseUrl/api/reports/route';
+  static String get apiReportsEvents => '$apiBaseUrl/api/reports/events';
+  static String get apiReportsSummary => '$apiBaseUrl/api/reports/summary';
+  static String get apiReportsTrips => '$apiBaseUrl/api/reports/trips';
+  static String get apiReportsStops => '$apiBaseUrl/api/reports/stops';
+
+  /// Traccar REST API Callers ke liye Authenticated Headers
+  static Map<String, String> get traccarHeaders {
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    final cookie = sessionCookie ?? prefs?.getString('traccar_session_cookie');
+    if (cookie != null && cookie.isNotEmpty) {
+      headers['Cookie'] = cookie;
+    }
+
+    return headers;
+  }
+
+  /// Logout ya session revoke (`/api/session/token/revoke`) par state clear karna
+  static void clearTraccarSession() {
+    sessionCookie = null;
+    userId = null;
+    userToken = null;
+    isLoggedIn = false;
+    dataLoaded = false;
+    fetchedLogin = false;
+    prefs?.remove('traccar_session_cookie');
+    prefs?.remove('user_id');
+  }
+}

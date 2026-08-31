@@ -1,0 +1,34 @@
+import 'package:flutter/material.dart';
+
+class MenuController extends ChangeNotifier {
+  late AnimationController _controller;
+  TickerProvider? vsync;
+
+  MenuController({required this.vsync});
+
+  void initialize({required TickerProvider vsync}) {
+    this.vsync = vsync;
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: vsync,
+    )..addListener(notifyListeners);
+  }
+
+  AnimationController get controller => _controller;
+
+  void open() {
+    _controller.forward();
+  }
+
+  void close() {
+    _controller.reverse();
+  }
+
+  AnimationStatus get state => _controller.status;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}

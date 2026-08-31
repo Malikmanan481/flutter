@@ -1,0 +1,27 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+
+
+class StaticVarMethod{
+
+  // static String listimageurl= 'assets/appsicon/roadpoint.jpeg';
+  // static String loginimageurl= 'assets/appsicon/roadpoint.jpeg';
+  // static String splashimageurl= 'assets/appsicon/roadpoint.jpeg';
+
+  // static String listimageurl= 'assets/appsicon/wonderlevel.jpg';
+  // static String loginimageurl= 'assets/appsicon/wonderlevel.jpg';
+  // static String splashimageurl= 'assets/appsicon/wonderlevel.jpg';
+
+
+  static String listimageurl= 'assets/appsicon/appIcon.png';
+  static String loginimageurl= 'assets/appsicon/appIcon.png';
+  static String splashimageurl= 'assets/appsicon/appIcon.png';
+
+
+
+
+
+}

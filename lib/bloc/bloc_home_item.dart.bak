@@ -1,0 +1,30 @@
+class HomeItem {
+  final bool fuel;
+  final String lat;
+  final String lng;
+  final String statusMessage;
+  final String status;
+  final int speed;
+  final String name;
+  final String angle;
+  final String imei;
+  final bool expired;
+  final String expiredText;
+  final String brandImage;
+  final String imageName;
+
+  HomeItem(
+      this.fuel,
+      this.lat,
+      this.lng,
+      this.statusMessage,
+      this.status,
+      this.speed,
+      this.name,
+      this.angle,
+      this.imei,
+      this.expired,
+      this.expiredText,
+      this.brandImage,
+      this.imageName);
+}

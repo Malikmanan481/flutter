@@ -1,0 +1,1682 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:get/get.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:progress_dialog_null_safe/progress_dialog_null_safe.dart';
+import 'package:speedotrack/activity/activity_about_us.dart';
+import 'package:speedotrack/activity/activity_splash_screen.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/model/model_settings_fn.dart';
+import 'package:speedotrack/network/network_api_request.dart';
+import 'package:speedotrack/sharedPrefs/main_prefs.dart';
+import 'package:custom_progress_button/custom_progress_button.dart';
+
+class ChangeIconActivity extends StatefulWidget {
+  @override
+  _ChangeIconActivityState createState() => _ChangeIconActivityState();
+}
+
+class _ChangeIconActivityState extends State<ChangeIconActivity> {
+  List<String> imeiArray = [];
+  List<String> namesJsonArray = [];
+  List<String> imagesJsonArray = [];
+  //FCR Comment OUT
+  List<FCR> fcrJsonArray = [];
+
+  VehicleSettingsModel? fnSettingString;
+  BuildContext? _context;
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+  }
+
+  void fetchData() {
+    imeiArray.clear();
+    namesJsonArray.clear();
+    imagesJsonArray.clear();
+    try {
+      imeiArray.addAll(Globals.prefs!.getStringList(MainPrefs.keyIMEI)!);
+      for (int i = 0; i < imeiArray.length; i++) {
+        fnSettingString = VehicleSettingsModel.fromJson(
+            jsonDecode(Globals.prefs!.getString('${imeiArray[i]}_settings')!));
+        print("-------------------------");
+        print(Globals.prefs!.getString('${imeiArray[i]}_settings')!);
+        /*TestingSettingsModel vehicleSettingsModel = TestingSettingsModel.fromJson(
+          jsonDecode(Globals.prefs.getString('${imeiArray[i]}_settings')));*/
+        namesJsonArray.add(fnSettingString!.name!);
+        fcrJsonArray.add(fnSettingString!.fcr!);
+        imagesJsonArray.add(
+            'images/${Globals.prefs!.getString('${imeiArray[i]}_icons')}red.png');
+      }
+      setState(() {});
+    } catch (e) {}
+  }
+
+  void changeIconDialog(String device, String imei, String namesJsonArray,
+      BuildContext context2) {
+    showGeneralDialog(
+      barrierLabel: 'changeIcon'.tr,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      context: context,
+      transitionDuration: Duration(milliseconds: 100),
+      pageBuilder: (context, __, ___) {
+        return Center(
+          child: Container(
+              height: MediaQuery.of(context).size.height * 0.40,
+              width: MediaQuery.of(context).size.width - 40,
+              color: Colors.white,
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Text(device,
+                        textAlign: TextAlign.start,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 15,
+                          decoration: TextDecoration.none,
+                          letterSpacing: 1.0,
+                          fontFamily: 'Montserrat',
+                        )),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_1_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_1_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_2_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_2_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_3_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_3_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_4_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_4_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_5_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_5_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_6_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_6_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_7_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_7_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_8_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_8_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_9_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_9_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_10_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_10_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            updateIcon(imei, 'm_11_', context, context2);
+                          },
+                          child: Image.asset(
+                            'images/m_11_red.png',
+                            height: 50,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )),
+        );
+      },
+    );
+  }
+
+  updateIcon(String imei, String icon, BuildContext context,
+      BuildContext context2) async {
+    // var response = await NetworkHelper().requestDataFromNetworkWithTimeout(
+    //     urlFile: 'func/fn_settings.objects.php',
+    //     body: {
+    //       'cmd': 'edit_object',
+    //       'group_id': fnSettingString!.groupID,
+    //       'driver_id': fnSettingString!.driverID,
+    //       'trailer_id': fnSettingString!.trailerID,
+    //       'name': fnSettingString!.name,
+    //       'imei': imei,
+    //       'device': fnSettingString!.device,
+    //       'sim_number': fnSettingString!.simNumber,
+    //       'model': fnSettingString!.model,
+    //       'vin': fnSettingString!.vin,
+    //       'plate_number': fnSettingString!.plateNumber,
+    //       'map_arrows': fnSettingString!.mapArrow,
+    //       'map_icon': fnSettingString!.mapIcon,
+    //       'tail_color': fnSettingString!.tailColor,
+    //       'tail_points': fnSettingString!.tailPoints,
+    //       'fcr': fnSettingString!.fcr,
+    //       'time_adj': fnSettingString!.timeAdj,
+    //       'accuracy': fnSettingString!.accuracy,
+    //       'unassign_driver': 'false',
+    //       'accvirt': fnSettingString!.false1,
+    //       'accvirt_cn': fnSettingString!.false2,
+    //       'forward_loc_data': "false",
+    //       'forward_loc_data_imei': "false",
+    //       'odometer_type': fnSettingString!.odometerType,
+    //       'engine_hours_type': fnSettingString!.engineHourType,
+    //       'odometer': fnSettingString!.odometer,
+    //       'engine_hours': fnSettingString!.engineHours,
+    //       'icon': 'img/markers/objects/$icon.png'
+    //     },
+    //     context: context);
+    // if (response.isNotEmpty) {
+    //   if (response.toLowerCase() == 'ok') {
+    //     Globals.prefs!.setString('${imei}_icons', icon);
+    //     Fluttertoast.showToast(
+    //         msg: 'Icon changed successfully. App will restart automatically!!',
+    //         toastLength: Toast.LENGTH_SHORT,
+    //         gravity: ToastGravity.CENTER,
+    //         timeInSecForIosWeb: 1,
+    //         backgroundColor: Globals.appColor,
+    //         textColor: Colors.white,
+    //         fontSize: 16.0);
+    //     Navigator.pop(context);
+    //     Navigator.pop(context2);
+    //     Timer(Duration(seconds: 2), () {
+    //       Navigator.of(_context!).pushReplacement(MaterialPageRoute(
+    //           builder: (_context) =>
+    //               SplashScreen(isFromLogin: false, isAppRestarted: true)));
+    //     });
+    //   } else {
+    //     Navigator.of(context).pop();
+    //     Fluttertoast.showToast(
+    //         msg: 'Some error occurred. Kindly contact support !!',
+    //         toastLength: Toast.LENGTH_SHORT,
+    //         gravity: ToastGravity.CENTER,
+    //         timeInSecForIosWeb: 1,
+    //         backgroundColor: Globals.appColor,
+    //         textColor: Colors.white,
+    //         fontSize: 16.0);
+    //   }
+    // } else {
+    //   Navigator.of(context).pop();
+    //   Fluttertoast.showToast(
+    //       msg: 'Some error occurred. Kindly contact support !!',
+    //       toastLength: Toast.LENGTH_SHORT,
+    //       gravity: ToastGravity.CENTER,
+    //       timeInSecForIosWeb: 1,
+    //       backgroundColor: Globals.appColor,
+    //       textColor: Colors.white,
+    //       fontSize: 16.0);
+    // }
+    Globals.prefs!.setString('${imei}_icons', icon);
+    Fluttertoast.showToast(
+        msg: 'iconChanged'.tr,
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Globals.appColor,
+        textColor: Colors.white,
+        fontSize: 16.0);
+    Navigator.pop(context);
+    Navigator.pop(context2);
+    Timer(Duration(seconds: 2), () {
+      Get.to(
+          transition: Transition.rightToLeft,
+          SplashScreen(isFromLogin: false, isAppRestarted: true));
+    });
+  }
+
+  void showNameDialog(String name, String imei, BuildContext context2) {
+    final TextEditingController nameController = new TextEditingController();
+    showGeneralDialog(
+      barrierLabel: 'changeName'.tr,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      context: context,
+      transitionDuration: Duration(milliseconds: 100),
+      pageBuilder: (context, __, ___) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    name,
+                    maxLines: 1,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 15,
+                      decoration: TextDecoration.none,
+                      letterSpacing: 1.0,
+                      fontFamily: 'Montserrat',
+                    ),
+                  ),
+                  Card(
+                    elevation: 0,
+                    child: TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        hintStyle: TextStyle(fontSize: 17),
+                        hintText: 'nameError'.tr,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.all(20),
+                      ),
+                    ),
+                  ),
+                  CustomProgressButton(
+                    stateColors: {
+                      ButtonState.success: Colors.green,
+                      ButtonState.fail: Colors.redAccent,
+                      ButtonState.loading: Colors.red,
+                      ButtonState.idle: Globals.appColor,
+                    },
+                    stateWidgets: {
+                      ButtonState.success: Text(
+                        'success'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.fail: Text(
+                        'failure'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.loading: Text(
+                        'changeName'.tr,
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      ButtonState.idle: Text(
+                        'proceed'.tr,
+                        style: TextStyle(fontSize: 20, color: Colors.white),
+                      ),
+                    },
+                    onPressed: () async {
+                      if (nameController.text.isNotEmpty) {
+                        updateValueName(
+                            imei, nameController.text, context, context2);
+                        nameController.text = '';
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Please enter device name.')));
+                      }
+                    },
+                    height: MediaQuery.of(context).size.height * 0.06,
+                    progressWidget: CircularProgressIndicator(
+                        backgroundColor: Globals.appColor,
+                        valueColor:
+                            new AlwaysStoppedAnimation<Color>(Colors.white)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showFuelDialog(
+      String name, String imei, FCR fcr, BuildContext context2) {
+    final TextEditingController fuelTxt = new TextEditingController();
+    showGeneralDialog(
+      barrierLabel: ('enterFuel').tr,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      context: context,
+      transitionDuration: Duration(milliseconds: 100),
+      pageBuilder: (context, __, ___) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    name,
+                    maxLines: 1,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 15,
+                      decoration: TextDecoration.none,
+                      letterSpacing: 1.0,
+                      fontFamily: 'Montserrat',
+                    ),
+                  ),
+                  Card(
+                    elevation: 0,
+                    child: TextField(
+                      controller: fuelTxt,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintStyle: TextStyle(fontSize: 17),
+                        hintText: ('enterFuel').tr,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.all(20),
+                      ),
+                    ),
+                  ),
+                  CustomProgressButton(
+                    onPressed: () async {
+                      if (fuelTxt.text.isNotEmpty) {
+                        updateFuelCost(
+                            imei,
+                            jsonEncode(FCR(
+                                    source: fcr.source,
+                                    measurement: fcr.measurement,
+                                    cost: fuelTxt.text,
+                                    summer: fcr.summer,
+                                    winter: fcr.winter,
+                                    winterStart: fcr.winterStart,
+                                    winterEnd: fcr.winterEnd)
+                                .toJson()),
+                            context,
+                            context2);
+                        fuelTxt.text = '';
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('pleaseEnterFuelCost'.tr)));
+                      }
+                    },
+                    stateWidgets: {
+                      ButtonState.success: Text(
+                        'success'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.fail: Text(
+                        'failure'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.loading: Text(
+                        'changeName'.tr,
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      ButtonState.idle: Text(
+                        'proceed'.tr,
+                        style: TextStyle(fontSize: 20, color: Colors.white),
+                      ),
+                    },
+                    // us
+                    height: MediaQuery.of(context).size.height * 0.06,
+                    maxWidth: MediaQuery.of(context).size.width * 0.50,
+                    progressWidget: CircularProgressIndicator(
+                        backgroundColor: Globals.appColor,
+                        valueColor:
+                            new AlwaysStoppedAnimation<Color>(Colors.white)),
+                    stateColors: {
+                      ButtonState.success: Colors.green,
+                      ButtonState.fail: Colors.redAccent,
+                      ButtonState.loading: Colors.red,
+                      ButtonState.idle: Globals.appColor,
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showMileageDialog(
+      String name, String imei, FCR fcr, BuildContext context2) {
+    final TextEditingController mileageCtl = new TextEditingController();
+    showGeneralDialog(
+      barrierLabel: 'Enter Mileage',
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      context: context,
+      transitionDuration: Duration(milliseconds: 100),
+      pageBuilder: (context, __, ___) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    name,
+                    maxLines: 1,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 15,
+                      decoration: TextDecoration.none,
+                      letterSpacing: 1.0,
+                      fontFamily: 'Montserrat',
+                    ),
+                  ),
+                  Card(
+                    elevation: 0,
+                    child: TextField(
+                      controller: mileageCtl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintStyle: TextStyle(fontSize: 17),
+                        hintText: 'Enter Mileage',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.all(20),
+                      ),
+                    ),
+                  ),
+                  CustomProgressButton(
+                    stateColors: {
+                      ButtonState.success: Colors.green,
+                      ButtonState.fail: Colors.redAccent,
+                      ButtonState.loading: Colors.red,
+                      ButtonState.idle: Globals.appColor,
+                    },
+                    onPressed: () async {
+                      if (mileageCtl.text.isNotEmpty) {
+                        updateFuelCost(
+                            imei,
+                            jsonEncode(FCR(
+                                    source: fcr.source,
+                                    measurement: fcr.measurement,
+                                    cost: fcr.cost,
+                                    summer: mileageCtl.text,
+                                    winter: mileageCtl.text,
+                                    winterStart: fcr.winterStart,
+                                    winterEnd: fcr.winterEnd)
+                                .toJson()),
+                            context,
+                            context2);
+                        mileageCtl.text = '';
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Please enter mileage.')));
+                      }
+                    },
+                    height: MediaQuery.of(context).size.height * 0.06,
+                    maxWidth: MediaQuery.of(context).size.width * 0.50,
+                    progressWidget: CircularProgressIndicator(
+                        backgroundColor: Globals.appColor,
+                        valueColor:
+                            new AlwaysStoppedAnimation<Color>(Colors.white)),
+                    stateWidgets: {
+                      ButtonState.success: Text(
+                        'success'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.fail: Text(
+                        'failure'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.loading: Text(
+                        'changeName'.tr,
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      ButtonState.idle: Text(
+                        'proceed'.tr,
+                        style: TextStyle(fontSize: 20, color: Colors.white),
+                      ),
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showOdometerDialog(String name, String imei, BuildContext context2) {
+    final TextEditingController odometerController =
+        new TextEditingController();
+    showGeneralDialog(
+      barrierLabel: 'Change Odometer',
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      context: context,
+      transitionDuration: Duration(milliseconds: 100),
+      pageBuilder: (context, __, ___) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    name,
+                    maxLines: 1,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 15,
+                      decoration: TextDecoration.none,
+                      letterSpacing: 1.0,
+                      fontFamily: 'Montserrat',
+                    ),
+                  ),
+                  Card(
+                    elevation: 0,
+                    child: TextField(
+                      controller: odometerController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintStyle: TextStyle(fontSize: 17),
+                        hintText: 'Enter odometer reading',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.all(20),
+                      ),
+                    ),
+                  ),
+                  CustomProgressButton(
+                    stateColors: {
+                      ButtonState.success: Colors.green,
+                      ButtonState.fail: Colors.redAccent,
+                      ButtonState.loading: Colors.red,
+                      ButtonState.idle: Globals.appColor,
+                    },
+                    onPressed: () async {
+                      if (odometerController.text.isNotEmpty) {
+                        updateValueOdometer(
+                            imei, odometerController.text, context, context2);
+                        odometerController.text = '';
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Value can\'t be empty.')));
+                      }
+                    },
+                    height: MediaQuery.of(context).size.height * 0.06,
+                    maxWidth: MediaQuery.of(context).size.width * 0.50,
+                    progressWidget: CircularProgressIndicator(
+                        backgroundColor: Globals.appColor,
+                        valueColor:
+                            new AlwaysStoppedAnimation<Color>(Colors.white)),
+                    stateWidgets: {
+                      ButtonState.success: Text(
+                        'Success',
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.fail: Text(
+                        'Fail',
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.loading: Text(
+                        'CHANGE ODOMETER',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      ButtonState.idle: Text(
+                        'CHANGE ODOMETER',
+                        style: TextStyle(fontSize: 20, color: Colors.white),
+                      ),
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showEngineHourDialog(String name, String imei, BuildContext context2) {
+    final TextEditingController engineHourController =
+        new TextEditingController();
+    showGeneralDialog(
+      barrierLabel: 'Change Engine Hour',
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      context: context,
+      transitionDuration: Duration(milliseconds: 100),
+      pageBuilder: (context, __, ___) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    name,
+                    maxLines: 1,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 15,
+                      decoration: TextDecoration.none,
+                      letterSpacing: 1.0,
+                      fontFamily: 'Montserrat',
+                    ),
+                  ),
+                  Card(
+                    elevation: 0,
+                    child: TextField(
+                      controller: engineHourController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintStyle: TextStyle(fontSize: 17),
+                        hintText: 'Enter engine hour',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.all(20),
+                      ),
+                    ),
+                  ),
+                  CustomProgressButton(
+                    stateColors: {
+                      ButtonState.success: Colors.green,
+                      ButtonState.fail: Colors.redAccent,
+                      ButtonState.loading: Colors.red,
+                      ButtonState.idle: Globals.appColor,
+                    },
+                    onPressed: () async {
+                      if (engineHourController.text.isNotEmpty) {
+                        updateValueEngineHours(
+                            imei, engineHourController.text, context, context2);
+                        engineHourController.text = '';
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Value can\'t be empty.')));
+                      }
+                    },
+                    height: MediaQuery.of(context).size.height * 0.06,
+                    maxWidth: MediaQuery.of(context).size.width * 0.60,
+                    progressWidget: CircularProgressIndicator(
+                        backgroundColor: Globals.appColor,
+                        valueColor:
+                            new AlwaysStoppedAnimation<Color>(Colors.white)),
+                    stateWidgets: {
+                      ButtonState.success: Text(
+                        'success'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.fail: Text(
+                        'failure'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.loading: Text(
+                        'changeEngineHour'.tr,
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      ButtonState.idle: Text(
+                        'changeEngineHour'.tr,
+                        style: TextStyle(fontSize: 20, color: Colors.white),
+                      ),
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showDialog(String device, String imei, String namesJsonArray, FCR fcr) {
+    fnSettingString = VehicleSettingsModel.fromJson(
+        jsonDecode(Globals.prefs!.getString('${imei}_settings')!));
+    showGeneralDialog(
+      barrierLabel: 'Change Device Settings',
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      context: context,
+      transitionDuration: Duration(milliseconds: 100),
+      pageBuilder: (context, __, ___) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    device,
+                    maxLines: 1,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 15,
+                      decoration: TextDecoration.none,
+                      letterSpacing: 1.0,
+                      fontFamily: 'Montserrat',
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: Card(
+                          elevation: 2,
+                          shadowColor: Color(0xFFF6F6F6),
+                          clipBehavior: Clip.antiAlias,
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(5))),
+                          child: InkWell(
+                            onTap: () => changeIconDialog(
+                                device, imei, namesJsonArray, context),
+                            child: Container(
+                              width: 70,
+                              height: 70,
+                              color: Colors.white,
+                              child: Center(
+                                  child: Column(
+                                mainAxisSize: MainAxisSize.max,
+                                children: <Widget>[
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    child: Center(
+                                        child: Padding(
+                                            padding: const EdgeInsets.all(5.0),
+                                            child: Image.asset(
+                                              'images/carIcon.png',
+                                              color: Color(0xFF7E8188),
+                                            ))),
+                                  ),
+                                  Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: 2, left: 2, right: 2),
+                                      child: Text(
+                                        'changeIcon'.tr,
+                                        maxLines: 2,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            fontSize: 12.0,
+                                            color: Color(0xFF7E8188),
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Montserrat'),
+                                      )),
+                                ],
+                              )),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Card(
+                          elevation: 2,
+                          shadowColor: Color(0xFFF6F6F6),
+                          clipBehavior: Clip.antiAlias,
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(5))),
+                          child: InkWell(
+                            onTap: () => showNameDialog(device, imei, context),
+                            child: Container(
+                              color: Colors.white,
+                              width: 70,
+                              height: 70,
+                              child: Center(
+                                  child: Column(
+                                mainAxisSize: MainAxisSize.max,
+                                children: <Widget>[
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    child: Center(
+                                        child: Padding(
+                                            padding: const EdgeInsets.all(5.0),
+                                            child: Image.asset(
+                                              'images/userIcon.png',
+                                              color: Color(0xFF7E8188),
+                                            ))),
+                                  ),
+                                  Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: 2, left: 2, right: 2),
+                                      child: Text(
+                                        'changeName'.tr,
+                                        maxLines: 2,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            fontSize: 12.0,
+                                            color: Color(0xFF7E8188),
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Montserrat'),
+                                      )),
+                                ],
+                              )),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: Card(
+                          elevation: 2,
+                          shadowColor: Color(0xFFF6F6F6),
+                          clipBehavior: Clip.antiAlias,
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(5))),
+                          child: InkWell(
+                            onTap: () =>
+                                showOdometerDialog(device, imei, context),
+                            child: Container(
+                              width: 70,
+                              height: 70,
+                              color: Colors.white,
+                              child: Center(
+                                  child: Column(
+                                mainAxisSize: MainAxisSize.max,
+                                children: <Widget>[
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    child: Center(
+                                        child: Padding(
+                                            padding: const EdgeInsets.all(5.0),
+                                            child: Image.asset(
+                                              'images/odometerIcon.png',
+                                              color: Color(0xFF7E8188),
+                                            ))),
+                                  ),
+                                  Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: 2, left: 2, right: 2),
+                                      child: Text(
+                                        'enterOdometer'.tr,
+                                        maxLines: 2,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            fontSize: 12.0,
+                                            color: Color(0xFF7E8188),
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Montserrat'),
+                                      )),
+                                ],
+                              )),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Card(
+                          elevation: 2,
+                          shadowColor: Color(0xFFF6F6F6),
+                          clipBehavior: Clip.antiAlias,
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(5))),
+                          child: InkWell(
+                            onTap: () =>
+                                showEngineHourDialog(device, imei, context),
+                            child: Container(
+                              width: 70,
+                              color: Colors.white,
+                              height: 70,
+                              child: Center(
+                                  child: Column(
+                                mainAxisSize: MainAxisSize.max,
+                                children: <Widget>[
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    child: Center(
+                                        child: Padding(
+                                            padding: const EdgeInsets.all(5.0),
+                                            child: Image.asset(
+                                              'images/engineHourIcon.png',
+                                              color: Color(0xFF7E8188),
+                                            ))),
+                                  ),
+                                  Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: 2, left: 2, right: 2),
+                                      child: Text(
+                                        'enterEngineHour'.tr,
+                                        maxLines: 2,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            fontSize: 12.0,
+                                            color: Color(0xFF7E8188),
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Montserrat'),
+                                      )),
+                                ],
+                              )),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: Card(
+                          elevation: 2,
+                          shadowColor: Color(0xFFF6F6F6),
+                          clipBehavior: Clip.antiAlias,
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(5))),
+                          child: InkWell(
+                            onTap: () =>
+                                showFuelDialog(device, imei, fcr, context),
+                            child: Container(
+                              width: 70,
+                              height: 70,
+                              color: Colors.white,
+                              child: Center(
+                                  child: Column(
+                                mainAxisSize: MainAxisSize.max,
+                                children: <Widget>[
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    child: Center(
+                                        child: Padding(
+                                            padding: const EdgeInsets.all(5.0),
+                                            child: Image.asset(
+                                              'images/fuel_cost.png',
+                                              color: Color(0xFF7E8188),
+                                            ))),
+                                  ),
+                                  Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: 2, left: 2, right: 2),
+                                      child: Text(
+                                        'enterFuel'.tr,
+                                        maxLines: 2,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            fontSize: 12.0,
+                                            color: Color(0xFF7E8188),
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Montserrat'),
+                                      )),
+                                ],
+                              )),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Visibility(
+                        /*visible: fcr.source == 'rates',*/
+                        child: Expanded(
+                          flex: 1,
+                          child: Card(
+                            elevation: 2,
+                            shadowColor: Color(0xFFF6F6F6),
+                            clipBehavior: Clip.antiAlias,
+                            shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(5))),
+                            child: InkWell(
+                              onTap: () =>
+                                  showMileageDialog(device, imei, fcr, context),
+                              child: Container(
+                                width: 70,
+                                height: 70,
+                                color: Colors.white,
+                                child: Center(
+                                    child: Column(
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: <Widget>[
+                                    Container(
+                                      width: 50,
+                                      height: 50,
+                                      child: Center(
+                                          child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(5.0),
+                                              child: Image.asset(
+                                                'images/vehicle_mileage.png',
+                                                color: Color(0xFF7E8188),
+                                              ))),
+                                    ),
+                                    Padding(
+                                        padding: const EdgeInsets.only(
+                                            bottom: 2, left: 2, right: 2),
+                                        child: Text(
+                                          'enterMileage'.tr,
+                                          maxLines: 2,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                              fontSize: 12.0,
+                                              color: Color(0xFF7E8188),
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Montserrat'),
+                                        )),
+                                  ],
+                                )),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void updateFuelCost(String imei, String value, BuildContext context,
+      BuildContext context2) async {
+    ProgressDialog pr;
+    pr = new ProgressDialog(context,
+        type: ProgressDialogType.normal, isDismissible: false, showLogs: false);
+    pr.show();
+    var response = await NetworkHelper().requestDataFromNetworkWithTimeout(
+        urlFile: 'func/fn_settings.objects.php',
+        body: {
+          'cmd': 'edit_object',
+          'fcr': value,
+          'group_id': fnSettingString!.groupID,
+          'driver_id': fnSettingString!.driverID,
+          'trailer_id': fnSettingString!.trailerID,
+          'name': fnSettingString!.name,
+          'imei': imei,
+          'device': fnSettingString!.device,
+          'sim_number': fnSettingString!.simNumber,
+          'model': fnSettingString!.model,
+          'vin': fnSettingString!.vin,
+          'plate_number': fnSettingString!.plateNumber,
+          'map_arrows': fnSettingString!.mapArrow,
+          'map_icon': fnSettingString!.mapIcon,
+          'tail_color': fnSettingString!.tailColor,
+          'tail_points': fnSettingString!.tailPoints,
+          'time_adj': fnSettingString!.timeAdj,
+          'accuracy': fnSettingString!.accuracy,
+          'unassign_driver': 'false',
+          'accvirt': fnSettingString!.false1,
+          'accvirt_cn': fnSettingString!.false2,
+          'forward_loc_data': "false",
+          'forward_loc_data_imei': "false",
+          'odometer_type': fnSettingString!.odometerType,
+          'engine_hours_type': fnSettingString!.engineHourType,
+          'odometer': fnSettingString!.odometer,
+          'engine_hours': fnSettingString!.engineHours,
+          'icon': fnSettingString!.icon
+        },
+        context: context);
+    if (response.isNotEmpty) {
+      if (response.toLowerCase() == 'ok') {
+        Fluttertoast.showToast(
+            msg:
+                'Details changed successfully. App will restart automatically!!',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Globals.appColor,
+            textColor: Colors.white,
+            fontSize: 16.0);
+        Navigator.pop(context);
+        Navigator.pop(context2);
+        Timer(Duration(seconds: 2), () {
+          Get.to(
+              transition: Transition.rightToLeft,
+              SplashScreen(isFromLogin: false, isAppRestarted: true));
+        });
+      } else {
+        Fluttertoast.showToast(
+            msg: 'contactSupport'.tr,
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Globals.appColor,
+            textColor: Colors.white,
+            fontSize: 16.0);
+      }
+    } else {
+      Fluttertoast.showToast(
+          msg: 'contactSupport'.tr,
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Globals.appColor,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+    pr.hide();
+  }
+
+  updateValueOdometer(String imei, String value, BuildContext context,
+      BuildContext context2) async {
+    ProgressDialog pr;
+    pr = new ProgressDialog(context,
+        type: ProgressDialogType.normal, isDismissible: false, showLogs: false);
+    pr.show();
+    var response = await NetworkHelper().requestDataFromNetworkWithTimeout(
+        urlFile: 'func/fn_settings.objects.php',
+        body: {
+          'cmd': 'edit_object',
+          'fcr': fnSettingString!.fcr,
+          'group_id': fnSettingString!.groupID,
+          'driver_id': fnSettingString!.driverID,
+          'trailer_id': fnSettingString!.trailerID,
+          'name': fnSettingString!.name,
+          'imei': imei,
+          'device': fnSettingString!.device,
+          'sim_number': fnSettingString!.simNumber,
+          'model': fnSettingString!.model,
+          'vin': fnSettingString!.vin,
+          'plate_number': fnSettingString!.plateNumber,
+          'map_arrows': fnSettingString!.mapArrow,
+          'map_icon': fnSettingString!.mapIcon,
+          'tail_color': fnSettingString!.tailColor,
+          'tail_points': fnSettingString!.tailPoints,
+          'time_adj': fnSettingString!.timeAdj,
+          'accuracy': fnSettingString!.accuracy,
+          'unassign_driver': 'false',
+          'accvirt': fnSettingString!.false1,
+          'accvirt_cn': fnSettingString!.false2,
+          'forward_loc_data': "false",
+          'forward_loc_data_imei': "false",
+          'odometer_type': fnSettingString!.odometerType,
+          'engine_hours_type': fnSettingString!.engineHourType,
+          'odometer': value,
+          'engine_hours': fnSettingString!.engineHours,
+          'icon': fnSettingString!.icon
+        },
+        context: context);
+    if (response.isNotEmpty) {
+      if (response.toLowerCase() == 'ok') {
+        Fluttertoast.showToast(
+            msg: 'detailsChanged'.tr,
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Globals.appColor,
+            textColor: Colors.white,
+            fontSize: 16.0);
+        Navigator.pop(context);
+        Navigator.pop(context2);
+        Timer(Duration(seconds: 2), () {
+          Get.to(
+              transition: Transition.rightToLeft,
+              SplashScreen(isFromLogin: false, isAppRestarted: true));
+        });
+      } else {
+        Fluttertoast.showToast(
+            msg: 'contactSupport'.tr,
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Globals.appColor,
+            textColor: Colors.white,
+            fontSize: 16.0);
+      }
+    } else {
+      Fluttertoast.showToast(
+          msg: 'contactSupport'.tr,
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Globals.appColor,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+    pr.hide();
+    fetchData();
+  }
+
+  // updateValue(String cmd, String imei, String key, String value) async {
+  //   ProgressDialog pr;
+  //   pr = new ProgressDialog(context,
+  //       type: ProgressDialogType.normal, isDismissible: false, showLogs: false);
+  //   pr.show();
+  //   var response = await NetworkHelper().requestDataFromNetworkWithTimeout(
+  //       urlFile: 'func/fn_settings.objects.php',
+  //       body: {
+  //         'cmd': 'edi_object',
+  //         'group_id': fnSettingString!.groupID,
+  //         'driver_id': fnSettingString!.driverID,
+  //         'trailer_id': fnSettingString!.trailerID,
+  //         'name': fnSettingString!.name,
+  //         'imei': imei,
+  //         'device': fnSettingString!.device,
+  //         'sim_number': fnSettingString!.simNumber,
+  //         'model': fnSettingString!.model,
+  //         'vin': fnSettingString!.vin,
+  //         'plate_number': fnSettingString!.plateNumber,
+  //         'map_arrows': fnSettingString!.mapArrow,
+  //         'map_icon': fnSettingString!.mapIcon,
+  //         'tail_color': fnSettingString!.tailColor,
+  //         'tail_points': fnSettingString!.tailPoints,
+  //         'time_adj': fnSettingString!.timeAdj,
+  //         'accuracy': fnSettingString!.accuracy,
+  //         'unassign_driver': 'false',
+  //         'accvirt': fnSettingString!.false1,
+  //         'accvirt_cn': fnSettingString!.false2,
+  //         'forward_loc_data': "false",
+  //         'forward_loc_data_imei': "false",
+  //         'odometer_type': fnSettingString!.odometerType,
+  //         'engine_hours_type': fnSettingString!.engineHourType,
+  //         'odometer': value,
+  //         'engine_hours': fnSettingString!.engineHours,
+  //         'icon': fnSettingString!.icon
+  //       },
+  //       context: context);
+  //   if (response.isNotEmpty) {
+  //     if (response.toLowerCase() == 'ok') {
+  //       pr.hide();
+  //       Fluttertoast.showToast(
+  //           msg:
+  //               'Details changed successfully. App will restart automatically!!',
+  //           toastLength: Toast.LENGTH_SHORT,
+  //           gravity: ToastGravity.CENTER,
+  //           timeInSecForIosWeb: 1,
+  //           backgroundColor: Globals.appColor,
+  //           textColor: Colors.white,
+  //           fontSize: 16.0);
+  //       Timer(Duration(seconds: 2), () {
+  //         Navigator.pop(context);
+  //       });
+  //     } else {
+  //       Fluttertoast.showToast(
+  //           msg: 'Some error occurred. Kindly contact support !!',
+  //           toastLength: Toast.LENGTH_SHORT,
+  //           gravity: ToastGravity.CENTER,
+  //           timeInSecForIosWeb: 1,
+  //           backgroundColor: Globals.appColor,
+  //           textColor: Colors.white,
+  //           fontSize: 16.0);
+  //     }
+  //   } else {
+  //     Fluttertoast.showToast(
+  //         msg: 'Some error occurred. Kindly contact support !!',
+  //         toastLength: Toast.LENGTH_SHORT,
+  //         gravity: ToastGravity.CENTER,
+  //         timeInSecForIosWeb: 1,
+  //         backgroundColor: Globals.appColor,
+  //         textColor: Colors.white,
+  //         fontSize: 16.0);
+  //   }
+  //   pr.hide();
+  //   fetchData();
+  // }
+
+  updateValueName(String imei, String value, BuildContext context,
+      BuildContext context2) async {
+    ProgressDialog pr;
+    pr = new ProgressDialog(context,
+        type: ProgressDialogType.normal, isDismissible: false, showLogs: false);
+    pr.show();
+    var response = await NetworkHelper().requestDataFromNetworkWithTimeout(
+        urlFile: 'func/fn_settings.objects.php',
+        body: {
+          'cmd': 'edit_object',
+          'group_id': fnSettingString!.groupID,
+          'driver_id': fnSettingString!.driverID,
+          'trailer_id': fnSettingString!.trailerID,
+          'name': value,
+          'imei': imei,
+          'device': fnSettingString!.device,
+          'sim_number': fnSettingString!.simNumber,
+          'model': fnSettingString!.model,
+          'vin': fnSettingString!.vin,
+          'plate_number': fnSettingString!.plateNumber,
+          'map_arrows': fnSettingString!.mapArrow,
+          'map_icon': fnSettingString!.mapIcon,
+          'tail_color': fnSettingString!.tailColor,
+          'tail_points': fnSettingString!.tailPoints,
+          'fcr': fnSettingString!.fcr,
+          'time_adj': fnSettingString!.timeAdj,
+          'accuracy': fnSettingString!.accuracy,
+          'unassign_driver': 'false',
+          'accvirt': fnSettingString!.false1,
+          'accvirt_cn': fnSettingString!.false2,
+          'forward_loc_data': "false",
+          'forward_loc_data_imei': "false",
+          'odometer_type': fnSettingString!.odometerType,
+          'engine_hours_type': fnSettingString!.engineHourType,
+          'odometer': fnSettingString!.odometer,
+          'engine_hours': fnSettingString!.engineHours,
+          'icon': fnSettingString!.icon
+        },
+        context: context);
+    if (response.isNotEmpty) {
+      if (response.toLowerCase() == 'ok') {
+        Navigator.pop(context);
+        Navigator.pop(context2);
+        Timer(Duration(seconds: 2), () {
+          Get.to(
+              transition: Transition.rightToLeft,
+              SplashScreen(isFromLogin: false, isAppRestarted: true));
+        });
+        Fluttertoast.showToast(
+            msg: 'detailsChanged'.tr,
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Globals.appColor,
+            textColor: Colors.white,
+            fontSize: 16.0);
+      } else {
+        Fluttertoast.showToast(
+            msg: 'contactSupport'.tr,
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Globals.appColor,
+            textColor: Colors.white,
+            fontSize: 16.0);
+      }
+    } else {
+      Fluttertoast.showToast(
+          msg: 'contactSupport'.tr,
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Globals.appColor,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+    pr.hide();
+    fetchData();
+  }
+
+  updateValueEngineHours(String imei, String value, BuildContext context,
+      BuildContext context2) async {
+    ProgressDialog pr;
+    pr = new ProgressDialog(context,
+        type: ProgressDialogType.normal, isDismissible: false, showLogs: false);
+    pr.show();
+    var response = await NetworkHelper().requestDataFromNetworkWithTimeout(
+        urlFile: 'func/fn_settings.objects.php',
+        body: {
+          'cmd': 'edit_object',
+          'group_id': fnSettingString!.groupID,
+          'driver_id': fnSettingString!.driverID,
+          'trailer_id': fnSettingString!.trailerID,
+          'name': fnSettingString!.name,
+          'imei': imei,
+          'device': fnSettingString!.device,
+          'sim_number': fnSettingString!.simNumber,
+          'model': fnSettingString!.model,
+          'vin': fnSettingString!.vin,
+          'plate_number': fnSettingString!.plateNumber,
+          'map_arrows': fnSettingString!.mapArrow,
+          'map_icon': fnSettingString!.mapIcon,
+          'tail_color': fnSettingString!.tailColor,
+          'tail_points': fnSettingString!.tailPoints,
+          'fcr': fnSettingString!.fcr,
+          'time_adj': fnSettingString!.timeAdj,
+          'accuracy': fnSettingString!.accuracy,
+          'unassign_driver': 'false',
+          'accvirt': fnSettingString!.false1,
+          'accvirt_cn': fnSettingString!.false2,
+          'forward_loc_data': "false",
+          'forward_loc_data_imei': "false",
+          'odometer_type': fnSettingString!.odometerType,
+          'engine_hours_type': fnSettingString!.engineHourType,
+          'odometer': fnSettingString!.odometer,
+          'engine_hours': value,
+          'icon': fnSettingString!.icon
+        },
+        context: context);
+    if (response.isNotEmpty) {
+      if (response.toLowerCase() == 'ok') {
+        Navigator.pop(context);
+        Navigator.pop(context2);
+        Timer(Duration(seconds: 2), () {
+          Get.to(
+              transition: Transition.rightToLeft,
+              SplashScreen(isFromLogin: false, isAppRestarted: true));
+        });
+        Fluttertoast.showToast(
+            msg: 'detailsChanged'.tr,
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Globals.appColor,
+            textColor: Colors.white,
+            fontSize: 16.0);
+      } else {
+        Fluttertoast.showToast(
+            msg: 'contactSupport'.tr,
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Globals.appColor,
+            textColor: Colors.white,
+            fontSize: 16.0);
+      }
+    } else {
+      Fluttertoast.showToast(
+          msg: 'contactSupport'.tr,
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Globals.appColor,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+    pr.hide();
+    fetchData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _context = context;
+    return Scaffold(
+      backgroundColor: Color(0xFFF6F6F6),
+      appBar: AppBar(
+        backgroundColor: Globals.appColor,
+        elevation: 0.0,
+        title: Text(
+          'changeVehicleSettings'.tr,
+          style:
+              TextStyle(color: Color(0xFFF6F6F6), fontFamily: 'Baloo_Thambi_2'),
+        ),
+        iconTheme: IconThemeData(
+          color: Color(0xFFF6F6F6), //change your color here
+        ),
+      ),
+      body: Container(
+        color: Color(0xFFF6F6F6),
+        child: ListView.builder(
+          addAutomaticKeepAlives: false,
+          itemCount: imeiArray.length,
+          physics: BouncingScrollPhysics(),
+          shrinkWrap: true,
+          scrollDirection: Axis.vertical,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: 0),
+              child: InkWell(
+                onTap: () => showDialog(namesJsonArray[index], imeiArray[index],
+                    namesJsonArray[index], fcrJsonArray[index]),
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(5))),
+                  elevation: 5,
+                  color: Color(0xFFF6F6F6),
+                  child: Container(
+                    padding: EdgeInsets.all(10),
+                    child: Row(
+                      children: <Widget>[
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              imeiArray[index],
+                              textAlign: TextAlign.start,
+                              style: TextStyle(
+                                  color: Color(0xFF7E8188),
+                                  fontSize: 12,
+                                  letterSpacing: 1.3,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Montserrat'),
+                            ),
+                            SizedBox(
+                              height: 5,
+                            ),
+                            Text(
+                              namesJsonArray[index],
+                              textAlign: TextAlign.start,
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                  letterSpacing: 1.3,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Montserrat'),
+                            ),
+                          ],
+                        ),
+                        Spacer(),
+                        Container(
+                          height: 40,
+                          width: 40,
+                          child: Image.asset(
+                            imagesJsonArray[index],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

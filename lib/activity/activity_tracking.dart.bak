@@ -1,0 +1,1469 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+import 'dart:ui';
+
+import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_speedometer_new/flutter_speedometer_new.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:html/parser.dart';
+import 'package:intl/intl.dart' as intl;
+import 'package:location/location.dart';
+import 'package:location/location.dart' as Location;
+import 'package:progress_indicators/progress_indicators.dart';
+import 'package:rxdart/subjects.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/helper/helper.dart';
+import 'package:speedotrack/main.dart';
+import 'package:speedotrack/model/model_object_fn.dart';
+import 'package:speedotrack/model/model_sensor_home.dart';
+import 'package:speedotrack/model/model_settings_fn.dart';
+
+import 'package:speedotrack/network/network_api_request.dart';
+import 'package:speedotrack/sharedPrefs/main_prefs.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'package:speedotrack/lib_animation/lat_lng_interpolation.dart';
+import 'package:speedotrack/lib_animation/models/lat_lng_delta.dart';
+
+class TrackingModel {
+  String? _lat;
+  String? _lng;
+  int? _speed;
+  String? _angle;
+  String? _status;
+  String? _statusMessage;
+
+  TrackingModel(this._lat, this._lng, this._speed, this._angle, this._status,
+      this._statusMessage);
+}
+
+class TrackingActivity extends StatefulWidget {
+  final String? lat;
+  final String? lng;
+  final int? speed;
+  final String? angle;
+  final String? name;
+  final String? imei;
+  final String? status;
+  final String? statusMessage;
+  static bool ignitionAvailable = false;
+  const TrackingActivity(
+      {@required this.lat,
+      @required this.lng,
+      @required this.speed,
+      @required this.angle,
+      @required this.name,
+      @required this.imei,
+      @required this.status,
+      @required this.statusMessage});
+
+  @override
+  _TrackingActivityState createState() => _TrackingActivityState(
+      finalLat: lat!,
+      finalLng: lng!,
+      finalSpeed: speed!,
+      finalAngle: angle!,
+      finalName: name!,
+      finalImei: imei!,
+      finalStatus: status!,
+      finalStatusMessage: statusMessage!);
+}
+
+class _TrackingActivityState extends State<TrackingActivity>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
+  _TrackingActivityState(
+      {this.finalLat,
+      this.finalLng,
+      this.finalSpeed,
+      this.finalAngle,
+      this.finalName,
+      this.finalImei,
+      this.finalStatus,
+      this.finalStatusMessage});
+
+  BitmapDescriptor? bitmapDescriptor;
+  final String? finalStatusMessage;
+  final String? finalLat;
+  final String? finalLng;
+  final int? finalSpeed;
+  final String? finalAngle;
+  final String? finalName;
+  final String? finalImei;
+  final String? finalStatus;
+  GoogleMapController? _controller;
+  String serverTime = '';
+  String deviceTime = '';
+  String engineHoursString = '';
+  String address = 'View Address';
+  String ignition = '';
+  String? gpsCn;
+  String weather = '',
+      weatherImageURL = '${Globals.baseUrl}/img/logo_small.png';
+  bool viewHider = true;
+  bool myLocation = false;
+  bool ruler = false;
+  Map<MarkerId, Marker> markers = <MarkerId, Marker>{};
+  bool trafficStatus = false,
+      mapTypeEnabled = Globals.prefs!.getBool('mapHybrid')!;
+  Timer? _timer;
+  int i = 0;
+  final Set<Polyline> _polyline = {};
+  final Set<Polyline> _distancePolyLine = {};
+  bool first = false;
+  MarkerId? markerId;
+  String mileage = 'Fetching';
+  String engineHour = 'Fetching';
+  List<LatLng> latLngList = [];
+  LatLngInterpolationStream? _latLngStream;
+  StreamSubscription<LatLngDelta>? subscription;
+  GoogleMap? googleMap;
+  bool isStarted = true;
+  //Map<String, dynamic> parkingModeMap = jsonDecode(Globals.prefs.getString('parkingMode'));
+  var now = new DateTime.now();
+  var nowAdd = new DateTime.now().add(Duration(days: 1));
+  var formatter = new intl.DateFormat('yyyy-MM-dd');
+  TrackingModel? trackingModel;
+  PublishSubject<double> eventObservable = PublishSubject();
+  List<SensorModelHome> sensorModelAboveLocal = [
+    SensorModelHome('images/ignitionIcon.png', 'Fetching', Colors.grey),
+    SensorModelHome('images/gpsIcon.png', 'Fetching', Colors.grey),
+    SensorModelHome('images/speedIcon.png', 'Fetching', Globals.appColor),
+    SensorModelHome('images/odometerIcon.png', 'Fetching', Globals.appColor),
+    SensorModelHome('images/engineHourIcon.png', 'Fetching', Globals.appColor)
+  ];
+  List<SensorModelHome> sensorModelBelowLocal = [];
+  StreamController<TrackingModel> _trackingModelStreamController =
+      BehaviorSubject();
+
+  Stream<TrackingModel> get trackingModelStream =>
+      _trackingModelStreamController.stream;
+
+  StreamSink<TrackingModel> get trackingModelSink =>
+      _trackingModelStreamController.sink;
+
+  StreamController<List<SensorModelHome>> _sensorAboveListStreamController =
+      BehaviorSubject();
+
+  Stream<List<SensorModelHome>> get sensorAboveListStream =>
+      _sensorAboveListStreamController.stream;
+
+  StreamSink<List<SensorModelHome>> get sensorAboveListSink =>
+      _sensorAboveListStreamController.sink;
+
+  StreamController<List<SensorModelHome>> _sensorBelowListStreamController =
+      BehaviorSubject();
+
+  Stream<List<SensorModelHome>> get sensorBelowListStream =>
+      _sensorBelowListStreamController.stream;
+
+  StreamSink<List<SensorModelHome>> get sensorBelowListSink =>
+      _sensorBelowListStreamController.sink;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        /*FnSettingsModel dataSettingModel =
+        FnSettingsModel.fromJson(jsonDecode(Globals.prefs.getString('${finalImei}_settings')));*/
+
+        VehicleSettingsModel vehicleSettingsModel =
+            VehicleSettingsModel.fromJson(
+                jsonDecode(Globals.prefs!.getString('${finalImei}_settings')!));
+
+        ObjectDataModel objectDataModel = ObjectDataModel.fromJson(
+            jsonDecode(Globals.prefs!.getString('${finalImei}_objects')!));
+        if (objectDataModel.toString().isNotEmpty) {
+          List<dynamic> dArray = objectDataModel.d!;
+          if (dArray.length != 0) {
+            List<dynamic> d0Array = objectDataModel.d![0];
+            Navigator.of(context)
+              ..pushReplacement(MaterialPageRoute(
+                  builder: (context) => TrackingActivity(
+                      lat: d0Array[2],
+                      lng: d0Array[3],
+                      speed: d0Array[6],
+                      angle: d0Array[5],
+                      name: vehicleSettingsModel.name!.toUpperCase(),
+                      imei: finalImei,
+                      status: objectDataModel.st.toString(),
+                      statusMessage: objectDataModel.ststr)));
+          }
+        }
+        break;
+      case AppLifecycleState.paused:
+        _polyline.clear();
+        latLngList.clear();
+        _timer!.cancel();
+        break;
+      case AppLifecycleState.inactive:
+        break;
+      case AppLifecycleState.detached:
+        break;
+      case AppLifecycleState.hidden:
+      // TODO: Handle this case.
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Globals.appColor,
+    ));
+    trackingModelSink.add(TrackingModel(finalLat, finalLng, finalSpeed,
+        finalAngle, finalStatus, finalStatusMessage));
+    markerId = MarkerId(finalImei!);
+    _latLngStream = LatLngInterpolationStream(
+      movementDuration: Duration(milliseconds: 9900),
+    );
+    _latLngStream!
+        .addLatLng(LatLng(double.parse(finalLat!), double.parse(finalLng!)));
+    setDataWithTimer();
+    setSubscription();
+  }
+
+  void setSubscription() {
+    subscription = _latLngStream!
+        .getLatLngInterpolation()
+        .listen((LatLngDelta delta) async {
+      if (!ruler) {
+        latLngList.add(delta.to!);
+        if (latLngList.length % 30 == 0 && !myLocation) {
+          double zoomLevel = await _controller!.getZoomLevel();
+          _controller!.animateCamera(CameraUpdate.newCameraPosition(
+              CameraPosition(target: delta.to!, zoom: zoomLevel)));
+        }
+        if (mounted) {
+          setState(() {
+            markers[markerId!] = Marker(
+              position: delta.to!,
+              icon: bitmapDescriptor!,
+              anchor: Offset(0.5, 0.675),
+              markerId: markerId!,
+            );
+          });
+          _polyline.add(Polyline(
+            polylineId: PolylineId(latLngList.first.toString()),
+            visible: !ruler ? true : false,
+            points: latLngList,
+            jointType: JointType.bevel,
+            endCap: Cap.roundCap,
+            width: 3,
+            startCap: Cap.roundCap,
+            color: Colors.red,
+          ));
+        }
+      }
+    });
+  }
+
+  /*Map<String, FnObjectModel> stringObjectToJSON(String str) => Map.from(json.decode(str))
+      .map((k, v) => MapEntry<String, FnObjectModel>(k, FnObjectModel.fromJson(v)));*/
+
+  Map<String, ObjectDataModel> stringObjectToJSON(String str) =>
+      Map.from(json.decode(str)).map((k, v) =>
+          MapEntry<String, ObjectDataModel>(k, ObjectDataModel.fromJson(v)));
+
+  bool whiteContainer = true;
+
+  void setDataWithTimer() {
+    if (mounted) {
+      updateUI();
+      fetchFnObjects();
+      fetchMileage();
+      fetchEngineHour();
+      fetchWeather();
+      setState(() {});
+    }
+    if (_timer != null) {
+      _timer!.cancel();
+    }
+    _timer = Timer.periodic(Duration(seconds: 10), (timer) {
+      fetchFnObjects();
+    });
+  }
+
+  void fetchFnObjects() {
+    NetworkHelper()
+        .requestDataFromNetworkWithTimeout(
+            urlFile: 'func/fn_objects.php',
+            body: {'cmd': 'load_object_data', 'imei': finalImei},
+            context: context)
+        .then((value) {
+      if (value.isNotEmpty) {
+        Map<String, ObjectDataModel> decoded = stringObjectToJSON(value);
+        Globals.prefs!.setString('${decoded.keys.elementAt(0)}_objects',
+            jsonEncode(decoded[decoded.keys.elementAt(0)]));
+        updateUI();
+      }
+    });
+  }
+
+  void fetchWeather() {
+    NetworkHelper()
+        .requestWeatherFromNetworkGET(
+            lat: finalLat, lng: finalLng, context: context)
+        .then((value) {
+      if (value.isNotEmpty) {
+        dynamic result = jsonDecode(value);
+        if (mounted) {
+          setState(() {
+            weather = '${result['main']['temp']}°C';
+            weatherImageURL =
+                'http://openweathermap.org/img/w/${result['weather'][0]['icon']}.png';
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _latLngStream!.cancel();
+    subscription!.cancel();
+    _latLngStream = null;
+    WidgetsBinding.instance.removeObserver(this);
+    if (_controller != null) _controller!.dispose();
+    _trackingModelStreamController.close();
+    _sensorAboveListStreamController.close();
+    _sensorBelowListStreamController.close();
+    _timer!.cancel();
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Globals.appColor,
+      systemNavigationBarColor: Globals.appColor,
+    ));
+  }
+
+  String angle = '0';
+  void updateUI() async {
+    sensorModelBelowLocal.clear();
+    List<SensorModelHome> sensorModelBelowLocalAll = [];
+    /*FnSettingsModel dataSettingModel =
+    FnSettingsModel.fromJson(jsonDecode(Globals.prefs.getString('${finalImei}_settings')));*/
+
+    VehicleSettingsModel vehicleSettingsModel = VehicleSettingsModel.fromJson(
+        jsonDecode(Globals.prefs!.getString('${finalImei}_settings')!));
+    ObjectDataModel? objectDataModel = ObjectDataModel.fromJson(
+        jsonDecode(Globals.prefs!.getString('${finalImei}_objects')!));
+    List<dynamic> d0Array = [];
+    try {
+      if (objectDataModel.toString().isNotEmpty) {
+        engineHoursString = objectDataModel.eh;
+        gpsCn = objectDataModel.cn.toString();
+        List<dynamic> dArray = objectDataModel.d!;
+        if (dArray.length != 0) {
+          d0Array = objectDataModel.d![0];
+          serverTime = d0Array[0];
+          deviceTime = d0Array[1];
+          trackingModelSink.add(TrackingModel(
+              d0Array[2],
+              d0Array[3],
+              d0Array[6],
+              d0Array[5],
+              objectDataModel.st.toString(),
+              objectDataModel.ststr));
+        }
+        BitmapDescriptor value = await Helper().getMarker(
+          context,
+            objectDataModel.st.toString(),
+            finalName!,
+            d0Array[5],
+            d0Array[6],
+            'images/${Helper().getMarkerName(objectDataModel.st.toString(), Globals.prefs!.getString('${finalImei}_icons')!)}');
+        bitmapDescriptor = value;
+        _latLngStream!.addLatLng(
+            LatLng(double.parse(d0Array[2]), double.parse(d0Array[3])));
+      }
+    } catch (e) {}
+    try {
+      Map<String, Sensors>? sensorsJsonObject = {};
+      try {
+        sensorsJsonObject = vehicleSettingsModel.sensors!;
+      } catch (e) {}
+
+      List<String> sensorsKeysJsonArray = [];
+      if (sensorsJsonObject != null) {
+        sensorsKeysJsonArray = sensorsJsonObject.keys.toList();
+      }
+      for (int j = 0; j < sensorsKeysJsonArray.length; j++) {
+        String sensorID = sensorsKeysJsonArray[j];
+        Sensors sensorJsonObject = sensorsJsonObject![sensorID]!;
+        String sensorName = sensorJsonObject.name!;
+        String sensorType = sensorJsonObject.resultType!;
+        String sensorFinalValue = "";
+        if (sensorName.toUpperCase() == 'IGNITION' ||
+            sensorName.toUpperCase() == 'ENGINE') {
+          switch (sensorType) {
+            case "percentage":
+              {
+                sensorFinalValue = Helper()
+                    .getSensorValueForResultTypePercentage(
+                        sensorJsonObject, d0Array);
+              }
+              break;
+            case "value":
+              {
+                sensorFinalValue = Helper().getSensorValueForResultTypeValue(
+                    sensorJsonObject, d0Array);
+              }
+              break;
+            case "logic":
+              {
+                sensorFinalValue = Helper().getSensorValueForResultTypeLogic(
+                    sensorJsonObject, d0Array);
+              }
+              break;
+          }
+          if (sensorFinalValue.contains(' ')) {
+            ignition = sensorFinalValue.replaceAll(' ', '');
+          } else {
+            ignition = sensorFinalValue;
+          }
+          sensorModelAboveLocal[0] = SensorModelHome(
+              'images/ignitionIcon.png',
+              ignition.toLowerCase() == 'on'
+                  ? 'Ignition:\nOn'
+                  : 'Ignition:\nOff',
+              ignition.toLowerCase() == 'on' ? Globals.appColor : Colors.grey);
+          TrackingActivity.ignitionAvailable =
+              sensorModelAboveLocal[0].text == 'Fetching' ? false : true;
+        } else if (sensorName.toUpperCase() == 'FUEL LEVEL' ||
+            sensorName.toUpperCase() == 'FUEL') {
+          String sensorFinalValue = "NA";
+          String units = sensorJsonObject.units!;
+          switch (sensorType) {
+            case "percentage":
+              {
+                sensorFinalValue = Helper()
+                    .getSensorValueForResultTypePercentage(
+                        sensorJsonObject, d0Array);
+              }
+              break;
+            case "value":
+              {
+                sensorFinalValue = Helper().getSensorValueForResultTypeValue(
+                    sensorJsonObject, d0Array);
+              }
+              break;
+            case "logic":
+              {
+                sensorFinalValue = Helper().getSensorValueForResultTypeLogic(
+                    sensorJsonObject, d0Array);
+              }
+              break;
+          }
+          sensorFinalValue = '$sensorFinalValue $units';
+          sensorModelBelowLocal.add(SensorModelHome(
+              Helper().getDrawable(sensorName),
+              '$sensorName : ' '$sensorFinalValue',
+              Globals.appColor));
+        } else {
+          sensorModelBelowLocalAll.addAll(
+              Helper().checkAndSetSensorHome(j, sensorsJsonObject, d0Array));
+        }
+      }
+    } catch (e) {}
+    sensorModelBelowLocal.addAll(sensorModelBelowLocalAll);
+    sensorModelAboveLocal[1] = SensorModelHome(
+        'images/gpsIcon.png',
+        gpsCn == '2' ? 'GPS:\nOn' : 'GPS:\nOff',
+        gpsCn == '2' ? Globals.appColor : Colors.grey);
+    sensorModelAboveLocal[2] = SensorModelHome('images/speedIcon.png',
+        'Odometer:\n${objectDataModel.o.toString()}km', Globals.appColor);
+    DateTime serverTimeFormat = DateTime.parse(serverTime);
+    String formattedDate =
+        intl.DateFormat('dd-MM-yy HH:mm').format(serverTimeFormat);
+    sensorModelBelowLocal.add(SensorModelHome('images/serverIcon.png',
+        'Time (Server): $formattedDate', Globals.appColor));
+    DateTime deviceTimeFormat = DateTime.parse(deviceTime);
+    String formattedDeviceDate =
+        intl.DateFormat('dd-MM-yy HH:mm').format(deviceTimeFormat);
+    sensorModelBelowLocal.add(SensorModelHome('images/deviceTime.png',
+        'Time (Device): $formattedDeviceDate', Globals.appColor));
+    updateList();
+  }
+
+  int distance = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0.0,
+        iconTheme: IconThemeData(
+          color: mapTypeEnabled
+              ? Color(0xFFF6F6F6)
+              : Globals.appColor, //change your color here
+        ),
+      ),
+      body: StreamBuilder<TrackingModel>(
+          stream: trackingModelStream,
+          builder: (context, snapshot) {
+            if (snapshot.data == null || snapshot.hasError) {
+              return Center(
+                  child: Text(
+                'Fetching data...',
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Globals.appColor,
+                    fontSize: 14,
+                    decoration: TextDecoration.none,
+                    letterSpacing: 1,
+                    fontFamily: 'Montserrat'),
+              ));
+            }
+            return Stack(
+              alignment: Alignment.topCenter,
+              children: <Widget>[
+                GoogleMap(
+                    onTap: (value) {
+                      setState(() {
+                        viewHider = !viewHider;
+                      });
+                    },
+                    compassEnabled: false,
+                    initialCameraPosition: CameraPosition(
+                      zoom: 18,
+                      target: LatLng(
+                          double.parse(finalLat!), double.parse(finalLng!)),
+                    ),
+                    polylines: ruler ? _distancePolyLine : _polyline,
+                    mapToolbarEnabled: false,
+                    gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>[
+                      new Factory<OneSequenceGestureRecognizer>(
+                        () => new EagerGestureRecognizer(),
+                      ),
+                    ].toSet(),
+                    markers: Set<Marker>.of(markers.values),
+                    // YOUR MARKS IN MAP
+                    mapType: mapTypeEnabled ? MapType.hybrid : MapType.normal,
+                    zoomControlsEnabled: false,
+                    trafficEnabled: trafficStatus,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: false,
+                    onMapCreated: (GoogleMapController controller) async {
+                      _controller = controller;
+                      bitmapDescriptor = await Helper().getMarker(
+                        context,
+                          snapshot.data!._status!,
+                          finalName!,
+                          snapshot.data!._angle!,
+                          snapshot.data!._speed!,
+                          'images/${Helper().getMarkerName(snapshot.data!._status!, Globals.prefs!.getString('${finalImei}_icons')!)}');
+                      if (mounted) {
+                        setState(() {
+                          markers[markerId!] = Marker(
+                            position: LatLng(double.parse(finalLat!),
+                                double.parse(finalLng!)),
+                            icon: bitmapDescriptor!,
+                            anchor: Offset(0.5, 0.675),
+                            markerId: markerId!,
+                          );
+                          whiteContainer = false;
+                        });
+                      }
+                    }),
+                AnimatedSize(
+                    duration: Duration(seconds: 1),
+                    curve: Curves.bounceIn,
+                    child: Container(
+                      height: whiteContainer
+                          ? MediaQuery.of(context).size.height
+                          : 0,
+                      width: whiteContainer
+                          ? MediaQuery.of(context).size.width
+                          : 0,
+                      color: Color(0xFFF6F6F6),
+                    )),
+                Container(
+                  alignment: Alignment.topCenter,
+                  padding: const EdgeInsets.all(10.0),
+                  margin: EdgeInsets.only(top: 30),
+                  height: 80,
+                  width: ruler ? 150 : 80,
+                  child: Visibility(
+                    visible: snapshot.data!._status == 'm' ? true : (ruler),
+                    child: ruler
+                        ? Padding(
+                            padding: const EdgeInsets.all(10.0),
+                            child: GlowingProgressIndicator(
+                              child: Text(
+                                '$distance km',
+                                style: TextStyle(
+                                  fontSize: 20.0,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFFF4500),
+                                ),
+                              ),
+                              duration: Duration(milliseconds: 500),
+                            ),
+                          )
+                        : Speedometer(
+                            size: 80,
+                            minValue: 0,
+                            maxValue: 180,
+                            currentValue: snapshot.data!._speed!,
+                            warningValue: 120,
+                            backgroundColor: Colors.transparent,
+                            meterColor: Globals.appColor,
+                            warningColor: Colors.red,
+                            kimColor: Colors.white.withOpacity(0.9),
+                            displayText: 'km/h',
+                            displayNumericStyle: TextStyle(
+                                fontFamily: 'Digital-Display',
+                                color: snapshot.data!._speed! > 120
+                                    ? Colors.red
+                                    : (mapTypeEnabled
+                                        ? Colors.red
+                                        : Globals.appColor),
+                                fontSize: 24),
+                            displayTextStyle: TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.bold,
+                                color: snapshot.data!._speed! > 120
+                                    ? Colors.red
+                                    : (mapTypeEnabled
+                                        ? Colors.red
+                                        : Globals.appColor),
+                                fontSize: 8),
+                          ),
+                  ),
+                ),
+                Container(
+                  margin: EdgeInsets.only(top: 70),
+                  alignment: Alignment.topRight,
+                  child: Column(
+                    children: <Widget>[
+                      Container(
+                        width: 40.0,
+                        height: 40.0,
+                        margin: EdgeInsets.only(right: 10, top: 10),
+                        child: new RawMaterialButton(
+                          shape: new CircleBorder(),
+                          elevation: 15.0,
+                          fillColor: mapTypeEnabled
+                              ? Globals.appColor
+                              : Color(0xFFF6F6F6),
+                          child: Image.asset(
+                            'images/mapType.png',
+                            height: 15,
+                            width: 15,
+                            color: mapTypeEnabled
+                                ? Color(0xFFF6F6F6)
+                                : Globals.appColor,
+                          ),
+                          onPressed: () {
+                            mapTypeEnabled
+                                ? Globals.prefs!.setBool('mapHybrid', false)
+                                : Globals.prefs!.setBool('mapHybrid', true);
+                            setState(() {
+                              mapTypeEnabled =
+                                  Globals.prefs!.getBool('mapHybrid')!;
+                            });
+                          },
+                        ),
+                      ),
+                      // Visibility(
+                      //   visible: Platform.isAndroid,
+                      //   child: Container(
+                      //     width: 40.0,
+                      //     height: 40.0,
+                      //     margin: EdgeInsets.only(right: 10, top: 10),
+                      //     child: new RawMaterialButton(
+                      //       shape: new CircleBorder(),
+                      //       elevation: 15.0,
+                      //       fillColor:
+                      //           parkingModeMap[finalImei] ? Globals.appColor : Color(0xFFF6F6F6),
+                      //       child: Image.asset(
+                      //         'images/parkingMode.png',
+                      //         height: 25,
+                      //         width: 25,
+                      //         color:
+                      //             parkingModeMap[finalImei] ? Color(0xFFF6F6F6) : Globals.appColor,
+                      //       ),
+                      //       onPressed: () async {
+                      //         if (parkingModeMap[finalImei]) {
+                      //           setState(() {
+                      //             parkingModeMap[finalImei] = false;
+                      //           });
+                      //           Globals.prefs.setString('parkingMode', jsonEncode(parkingModeMap));
+                      //         } else {
+                      //           setState(() {
+                      //             parkingModeMap[finalImei] = true;
+                      //           });
+                      //           Globals.prefs.setString('parkingMode', jsonEncode(parkingModeMap));
+                      //         }
+                      //         List<String> parkingEnabledIMEI = [];
+                      //         for (int i = 0; i < parkingModeMap.length; i++) {
+                      //           if (parkingModeMap[parkingModeMap.keys.elementAt(i)]) {
+                      //             parkingEnabledIMEI.add(parkingModeMap.keys.elementAt(i));
+                      //           }
+                      //         }
+                      //
+                      //         final fgsIsRunning =
+                      //             await ForegroundService.foregroundServiceIsStarted();
+                      //         if (parkingEnabledIMEI.length > 0) {
+                      //           if (fgsIsRunning) {
+                      //             await ForegroundService.stopForegroundService();
+                      //           }
+                      //           maybeStartFGS();
+                      //         } else {
+                      //           Fluttertoast.showToast(
+                      //               msg: 'This may take a while to stop!!!',
+                      //               toastLength: Toast.LENGTH_SHORT,
+                      //               gravity: ToastGravity.CENTER,
+                      //               timeInSecForIosWeb: 1,
+                      //               backgroundColor: Globals.appColor,
+                      //               textColor: Colors.white,
+                      //               fontSize: 16.0);
+                      //           await ForegroundService.stopForegroundService();
+                      //         }
+                      //       },
+                      //     ),
+                      //   ),
+                      // ),
+                      Container(
+                        width: 40.0,
+                        height: 40.0,
+                        margin: EdgeInsets.only(right: 10, top: 10),
+                        child: new RawMaterialButton(
+                          shape: new CircleBorder(),
+                          elevation: 15.0,
+                          fillColor: trafficStatus
+                              ? Globals.appColor
+                              : Color(0xFFF6F6F6),
+                          child: Icon(Icons.traffic,
+                              size: 15,
+                              color: trafficStatus
+                                  ? Color(0xFFF6F6F6)
+                                  : Globals.appColor),
+                          onPressed: () {
+                            setState(() {
+                              trafficStatus = !trafficStatus;
+                            });
+                          },
+                        ),
+                      ),
+                      Container(
+                        width: 40.0,
+                        height: 40.0,
+                        margin: EdgeInsets.only(right: 10, top: 10),
+                        child: new RawMaterialButton(
+                          shape: new CircleBorder(),
+                          elevation: 15.0,
+                          fillColor: Color(0xFFF6F6F6),
+                          child: Icon(FontAwesomeIcons.directions,
+                              size: 15, color: Globals.appColor),
+                          onPressed: () => openMap(
+                              double.parse(snapshot.data!._lat!),
+                              double.parse(snapshot.data!._lng!)),
+                        ),
+                      ),
+                      Container(
+                        width: 40.0,
+                        height: 40.0,
+                        margin: EdgeInsets.only(right: 10, top: 10),
+                        child: new RawMaterialButton(
+                          shape: new CircleBorder(),
+                          elevation: 15.0,
+                          fillColor: Color(0xFFF6F6F6),
+                          child: Icon(
+                            FontAwesomeIcons.streetView,
+                            size: 15,
+                            color: Globals.appColor,
+                          ),
+                          onPressed: () => openMapStreet(
+                              double.parse(snapshot.data!._lat!),
+                              double.parse(snapshot.data!._lng!)),
+                        ),
+                      ),
+                      Container(
+                        width: 40.0,
+                        height: 40.0,
+                        margin: EdgeInsets.only(right: 10, top: 10),
+                        child: new RawMaterialButton(
+                          shape: new CircleBorder(),
+                          elevation: 15.0,
+                          fillColor: Color(0xFFF6F6F6),
+                          child: Image.asset(
+                            'images/switchIcon.png',
+                            height: 15,
+                            width: 15,
+                            color: Globals.appColor,
+                          ),
+                          onPressed: () {
+                            fetchChangeDeviceData();
+                          },
+                        ),
+                      ),
+                      Container(
+                        width: 40.0,
+                        height: 40.0,
+                        margin: EdgeInsets.only(right: 10, top: 10),
+                        child: new RawMaterialButton(
+                          shape: new CircleBorder(),
+                          elevation: 15.0,
+                          fillColor:
+                              myLocation ? Globals.appColor : Color(0xFFF6F6F6),
+                          child: Image.asset(
+                            'images/gpsIcon.png',
+                            height: 15,
+                            width: 15,
+                            color: myLocation
+                                ? Color(0xFFF6F6F6)
+                                : Globals.appColor,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              myLocation = !myLocation;
+                              if (!myLocation) {
+                                _controller!.animateCamera(
+                                    CameraUpdate.newCameraPosition(
+                                        CameraPosition(
+                                            zoom: 18,
+                                            target:
+                                                markers.values.last.position,
+                                            bearing: double.parse(
+                                                snapshot.data!._angle!))));
+                              } else {
+                                getToMyLocation();
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                      Container(
+                        width: 40.0,
+                        height: 40.0,
+                        margin: EdgeInsets.only(right: 10, top: 10),
+                        child: new RawMaterialButton(
+                          shape: new CircleBorder(),
+                          elevation: 15.0,
+                          fillColor:
+                              ruler ? Globals.appColor : Color(0xFFF6F6F6),
+                          child: Icon(
+                            FontAwesomeIcons.ruler,
+                            size: 15,
+                            color: ruler ? Color(0xFFF6F6F6) : Globals.appColor,
+                          ),
+                          onPressed: () async {
+                            setState(() {
+                              ruler = !ruler;
+                            });
+                            if (ruler) {
+                              LatLng latLngLast = markers.values.last.position;
+                              List<LatLng> latLngDistance = [];
+                              var location = new Location.Location();
+                              try {
+                                LocationData currentLocation =
+                                    await location.getLocation();
+                                latLngDistance.add(LatLng(
+                                    currentLocation.latitude!,
+                                    currentLocation.longitude!));
+                                latLngDistance.add(latLngLast);
+                              } on Exception {}
+                              List<double> latitude = [];
+                              List<double> longitude = [];
+                              for (int i = 0; i < latLngDistance.length; i++) {
+                                latitude.add(latLngDistance[i].latitude);
+                                longitude.add(latLngDistance[i].longitude);
+                              }
+                              int distanceTemp = calculateDistance(
+                                      latLngDistance.first.latitude,
+                                      latLngDistance.first.longitude,
+                                      latLngDistance.last.latitude,
+                                      latLngDistance.last.longitude)
+                                  .toInt();
+                              setState(() {
+                                _distancePolyLine.clear();
+                                _distancePolyLine.add(Polyline(
+                                  polylineId: PolylineId(
+                                      latLngDistance.last.toString()),
+                                  visible: ruler,
+                                  points: latLngDistance,
+                                  jointType: JointType.round,
+                                  endCap: Cap.roundCap,
+                                  width: 2,
+                                  startCap: Cap.roundCap,
+                                  color: Colors.red,
+                                ));
+                                _controller!.animateCamera(
+                                    CameraUpdate.newCameraPosition(
+                                        CameraPosition(
+                                            target: latLngDistance.last,
+                                            bearing: 0)));
+                                _controller!.animateCamera(
+                                    CameraUpdate.newLatLngBounds(
+                                        getBounds(latitude, longitude), 100));
+                                distance = distanceTemp;
+                              });
+                            } else {
+                              _controller!.animateCamera(
+                                  CameraUpdate.newCameraPosition(CameraPosition(
+                                zoom: 18,
+                                target: markers.values.last.position,
+                                bearing: double.parse(snapshot.data!._angle!),
+                              )));
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                AnimatedOpacity(
+                  opacity: viewHider ? 1.0 : 0.0,
+                  duration: Duration(seconds: 1),
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Wrap(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                              color: Color(0xFFF6F6F6),
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(10))),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              SizedBox(
+                                height: 10,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    left: 10.0, right: 10),
+                                child: Container(
+                                  width: MediaQuery.of(context).size.width,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: <Widget>[
+                                      Expanded(
+                                        flex: 4,
+                                        child: InkWell(
+                                          onTap: () => fetchAddress(
+                                              snapshot.data!._lat!,
+                                              snapshot.data!._lng!),
+                                          child: Row(
+                                            children: [
+                                              Image.asset(
+                                                'images/address.png',
+                                                height: 25,
+                                                width: 25,
+                                                color: Color(0xFF7E8188),
+                                              ),
+                                              SizedBox(
+                                                width: 5,
+                                              ),
+                                              Expanded(
+                                                child: AutoSizeText(
+                                                  '$address',
+                                                  softWrap: true,
+                                                  wrapWords: true,
+                                                  minFontSize: 6,
+                                                  textAlign: TextAlign.start,
+                                                  style: TextStyle(
+                                                    color: Color(0xFF7E8188),
+                                                    fontSize: 14,
+                                                    letterSpacing: 1,
+                                                    fontFamily: 'Montserrat',
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                  maxLines: 3,
+                                                ),
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.end,
+                                          children: [
+                                            Image.network(
+                                              weatherImageURL,
+                                              height: 25,
+                                              width: 25,
+                                            ),
+                                            SizedBox(
+                                              width: 5,
+                                            ),
+                                            AutoSizeText(
+                                              weather,
+                                              minFontSize: 10,
+                                              textAlign: TextAlign.end,
+                                              style: TextStyle(
+                                                color: Color(0xFF7E8188),
+                                                fontSize: 14,
+                                                letterSpacing: 1,
+                                                fontFamily: 'Montserrat',
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              maxLines: 3,
+                                            )
+                                          ],
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              StreamBuilder<List<SensorModelHome>>(
+                                  stream: sensorAboveListStream,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.data == null ||
+                                        snapshot.hasError ||
+                                        snapshot.data!.length == 0) {
+                                      return Container(
+                                        height: 0,
+                                        width: 0,
+                                      );
+                                    }
+                                    return TrackingListWidget(
+                                        sensorModel: snapshot.data!);
+                                  }),
+                              StreamBuilder<List<SensorModelHome>>(
+                                  stream: sensorBelowListStream,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.data == null ||
+                                        snapshot.hasError ||
+                                        snapshot.data!.length == 0) {
+                                      return Container(
+                                        height: 0,
+                                        width: 0,
+                                      );
+                                    }
+                                    return TrackingListWidget(
+                                        sensorModel: snapshot.data!);
+                                  }),
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    left: 10.0, right: 10, top: 5, bottom: 5),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: Image.asset(
+                                        'images/googleLogo.png',
+                                        height: 20,
+                                      ),
+                                      flex: 1,
+                                    ),
+                                    Expanded(
+                                      child: AutoSizeText(
+                                        '$finalName',
+                                        minFontSize: 8,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Color(0xFF7E8188),
+                                          fontSize: 15,
+                                          letterSpacing: 1.0,
+                                          fontFamily: 'Montserrat',
+                                        ),
+                                      ),
+                                      flex: 3,
+                                    ),
+                                    Expanded(
+                                      child: AutoSizeText(
+                                        '${snapshot.data!._statusMessage}',
+                                        minFontSize: 8,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: Color(0xFF7E8188),
+                                          fontSize: 15,
+                                          letterSpacing: 1.0,
+                                          fontFamily: 'Montserrat',
+                                        ),
+                                      ),
+                                      flex: 5,
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              ],
+            );
+          }),
+    );
+  }
+
+  Future<dynamic> fetchTodayData(String dataItems) async {
+    String formatted = formatter.format(now);
+    String formattedAdd = formatter.format(nowAdd);
+    var response = await NetworkHelper().requestDataFromNetwork(
+        urlFile: '/func/fn_reports.gen.php',
+        body: {
+          'cmd': 'report',
+          'data_items': dataItems,
+          'dtf': '$formatted',
+          'dtt': '$formattedAdd',
+          'format': 'html',
+          'imei': '$finalImei',
+          'name': '',
+          'sensor_names': '',
+          'show_addresses': 'false',
+          'show_coordinates': 'true',
+          'speed_limit': '',
+          'stop_duration': '300',
+          'type': 'general',
+          'zone_ids': '',
+          'zones_addresses': 'false',
+          'ignore_empty_reports':'',
+          'markers_addresses':'false',
+          'marker_ids':'',
+          'other':''
+        },
+        context: context);
+    if (response.isNotEmpty) {
+      var responseDocument = await NetworkHelper().requestDataFromNetwork(
+          urlFile: '/func/fn_saveas.php?format=html',
+          body: {
+            'filename': 'report',
+            'content': response,
+          },
+          context: context);
+      return responseDocument;
+    }
+  }
+
+  void fetchMileage() {
+    fetchTodayData('route_length').then((value) {
+      var document = parse(value);
+      try {
+        mileage =
+            document.body!.children[5].children[0].children[0].children[1].text;
+      } catch (e) {
+        mileage = 'No Data';
+      }
+      sensorModelAboveLocal[3] = SensorModelHome(
+          'images/odometerIcon.png', 'Mileage:\n$mileage', Globals.appColor);
+      updateList();
+    });
+  }
+
+  void fetchEngineHour() async {
+    if (TrackingActivity.ignitionAvailable) {
+      fetchTodayData('engine_work').then((value) {
+        var document = parse(value);
+        try {
+          engineHour = document
+              .body!.children[5].children[0].children[0].children[1].text;
+        } catch (e) {
+          engineHour = 'No Data';
+        }
+        sensorModelAboveLocal[4] = SensorModelHome('images/engineHourIcon.png',
+            'Engine Hour:\n$engineHour', Globals.appColor);
+        updateList();
+      });
+    }
+  }
+
+  void fetchAddress(String lat, String lng) async {
+    setState(() {
+      address = 'Fetching';
+    });
+    var response = await NetworkHelper().requestDataFromNetwork(
+        urlFile: '/tools/gc_post.php',
+        body: {'cmd': 'latlng', 'lat': lat, 'lng': lng},
+        context: context);
+    if (response.isNotEmpty) {
+      setState(() {
+        address = response.replaceAll('\\', '').replaceAll('"', '');
+      });
+      Timer(Duration(seconds: 5), () {
+        setState(() {
+          address = 'View Address';
+        });
+      });
+    } else {
+      setState(() {
+        address = 'No Data';
+      });
+      Timer(Duration(seconds: 1, milliseconds: 500), () {
+        setState(() {
+          address = 'View Address';
+        });
+      });
+    }
+  }
+
+  void changeDeviceDialog(List<String> imeiArray, List<String> namesJsonArray) {
+    showGeneralDialog(
+      barrierLabel: 'Change Device',
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      context: context,
+      transitionDuration: Duration(milliseconds: 100),
+      pageBuilder: (_, __, ___) {
+        return Center(
+          child: Card(
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: AutoSizeText(
+                        'Change Device',
+                        minFontSize: 8,
+                        maxLines: 1,
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 15,
+                          decoration: TextDecoration.none,
+                          letterSpacing: 1.0,
+                          fontFamily: 'Montserrat',
+                        ),
+                      ),
+                    ),
+                    changeDeviceDropDown(imeiArray, namesJsonArray),
+                  ],
+                ),
+              )),
+        );
+      },
+    );
+  }
+
+  DropdownButton<String> changeDeviceDropDown(
+      List<String> iMEIArray, List<String> namesJsonArray) {
+    String deviceSelected = iMEIArray[0];
+    List<DropdownMenuItem<String>> dropdownItems = [];
+    for (int i = 0; i < iMEIArray.length; i++) {
+      var newItem = DropdownMenuItem(
+        child: Text(namesJsonArray[i]),
+        value: iMEIArray[i],
+      );
+      dropdownItems.add(newItem);
+    }
+
+    return DropdownButton<String>(
+        value: deviceSelected,
+        items: dropdownItems,
+        onChanged: (iMEI) {
+          try {
+            /*FnSettingsModel dataSettingModel =
+            FnSettingsModel.fromJson(jsonDecode(Globals.prefs.getString('${iMEI}_settings')));*/
+
+            VehicleSettingsModel vehicleSettingsModel =
+                VehicleSettingsModel.fromJson(
+                    jsonDecode(Globals.prefs!.getString('${iMEI}_settings')!));
+
+            ObjectDataModel objectDataModel = ObjectDataModel.fromJson(
+                jsonDecode(Globals.prefs!.getString('${iMEI}_objects')!));
+            if (objectDataModel.toString().isNotEmpty) {
+              List<dynamic> dArray = objectDataModel.d!;
+              if (dArray.length != 0) {
+                List<dynamic> d0Array = objectDataModel.d![0];
+                Navigator.of(context)
+                  ..pop()
+                  ..pushReplacement(MaterialPageRoute(
+                      builder: (context) => TrackingActivity(
+                          lat: d0Array[2],
+                          lng: d0Array[3],
+                          speed: d0Array[6],
+                          angle: d0Array[5],
+                          name: vehicleSettingsModel.name!.toUpperCase(),
+                          imei: iMEI,
+                          status: objectDataModel.st.toString(),
+                          statusMessage: objectDataModel.ststr)));
+              }
+            }
+          } catch (e) {
+            Fluttertoast.showToast(
+                msg: 'Some error occurred while switching device.');
+          }
+        });
+  }
+
+  LatLngBounds getBounds(List<double> latitude, List<double> longitude) {
+    var lngs = longitude;
+    var lats = latitude;
+
+    double topMost = lngs.reduce(max);
+    double leftMost = lats.reduce(min);
+    double rightMost = lats.reduce(max);
+    double bottomMost = lngs.reduce(min);
+
+    LatLngBounds bounds = LatLngBounds(
+      northeast: LatLng(rightMost, topMost),
+      southwest: LatLng(leftMost, bottomMost),
+    );
+    return bounds;
+  }
+
+  double calculateDistance(lat1, lon1, lat2, lon2) {
+    var p = 0.017453292519943295;
+    var c = cos;
+    var a = 0.5 -
+        c((lat2 - lat1) * p) / 2 +
+        c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p)) / 2;
+    return 12742 * asin(sqrt(a));
+  }
+
+  void fetchChangeDeviceData() {
+    List<String> imeiArray = [];
+    List<String> namesJsonArray = [];
+    try {
+      imeiArray.addAll(Globals.prefs!.getStringList(MainPrefs.keyIMEI)!);
+      for (int i = 0; i < imeiArray.length; i++) {
+        namesJsonArray.add(VehicleSettingsModel.fromJson(jsonDecode(
+                Globals.prefs!.getString('${imeiArray[i]}_settings')!))
+            .name!
+            .toUpperCase());
+      }
+      changeDeviceDialog(imeiArray, namesJsonArray);
+    } catch (e) {}
+  }
+
+  void getToMyLocation() async {
+    var location = new Location.Location();
+    try {
+      LocationData currentLocation = await location.getLocation();
+      _controller!.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
+          zoom: 18,
+          target:
+              LatLng(currentLocation.latitude!, currentLocation.longitude!))));
+    } on Exception {}
+  }
+
+  static Future<void> openMap(double latitude, double longitude) async {
+    String googleUrl =
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+    if (await canLaunch(googleUrl)) {
+      await launch(googleUrl);
+    } else {
+      throw 'Could not open the map.';
+    }
+  }
+
+  static Future<void> openMapStreet(double latitude, double longitude) async {
+    String googleUrl = 'google.streetview:cbll=$latitude,$longitude';
+    if (await canLaunch(googleUrl)) {
+      await launch(googleUrl);
+    } else {
+      throw 'Could not open the map.';
+    }
+  }
+
+  void updateList() {
+    if (!_sensorBelowListStreamController.isClosed) {
+      List<SensorModelHome> sensorModelAbove = [];
+      for (var sensor in sensorModelAboveLocal) {
+        if (sensor.text.contains('Fetching') ||
+            sensor.text.contains('No Data')) {
+          continue;
+        }
+        sensorModelAbove.add(sensor);
+      }
+      List<SensorModelHome> sensorModelBelow = [];
+      for (var sensor in sensorModelBelowLocal) {
+        if (sensor.text.contains('Fetching') ||
+            sensor.text.contains('No Data')) {
+          continue;
+        }
+        sensorModelBelow.add(sensor);
+      }
+      if ((sensorModelAbove.length + sensorModelBelow.length) > 8) {
+        sensorAboveListSink.add(sensorModelAbove);
+        sensorBelowListSink.add(sensorModelBelow);
+      } else {
+        List<SensorModelHome> sensorModelCombined = [];
+        sensorModelCombined.addAll(sensorModelAbove);
+        sensorModelCombined.addAll(sensorModelBelow);
+        sensorAboveListSink.add(sensorModelCombined);
+        sensorBelowListSink.add([]);
+      }
+    }
+  }
+}
+
+class TrackingListWidget extends StatelessWidget {
+  final List<SensorModelHome>? sensorModel;
+
+  const TrackingListWidget({Key? key, this.sensorModel}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 80,
+      child: ListView.builder(
+        shrinkWrap: true,
+        addAutomaticKeepAlives: false,
+        scrollDirection: Axis.horizontal,
+        itemCount: sensorModel!.length,
+        itemBuilder: (BuildContext context, int index) => Padding(
+          padding: const EdgeInsets.only(top: 5, bottom: 5),
+          child: Card(
+            elevation: 2,
+            shadowColor: Color(0xFFF6F6F6),
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(5))),
+            child: Container(
+              width: 80,
+              child: Center(
+                  child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: <Widget>[
+                  Container(
+                    child: Center(
+                        child: Padding(
+                            padding: const EdgeInsets.all(5.0),
+                            child: Image.asset(sensorModel![index].image,
+                                color: sensorModel![index].color))),
+                    width: 35,
+                    height: 30,
+                  ),
+                  Padding(
+                      padding:
+                          const EdgeInsets.only(bottom: 2, left: 2, right: 2),
+                      child: AutoSizeText(
+                        sensorModel![index].text,
+                        maxLines: 2,
+                        minFontSize: 6,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 10.0,
+                            color: sensorModel![index].color,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Montserrat'),
+                      )),
+                ],
+              )),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

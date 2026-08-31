@@ -1,0 +1,238 @@
+import 'dart:math';
+
+import 'package:flutter/material.dart';
+import 'package:speedotrack/lib_latlng/src/latlng.dart';
+import 'package:speedotrack/lib_latlng/src/projection.dart';
+import 'package:speedotrack/lib_latlng/src/tile_index.dart';
+import 'provider.dart';
+
+class Map extends StatefulWidget {
+  final MapProvider? provider;
+  final MapController? controller;
+
+  Map({
+    Key? key,
+    this.provider = const GoogleMapProvider(),
+    @required this.controller,
+  }) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _MapState();
+}
+
+class _MapState extends State<Map> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller!.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: _build);
+  }
+
+  Widget _build(BuildContext context, BoxConstraints constraints) {
+    final controller = widget.controller;
+    final tileSize = controller!.tileSize;
+    final size = constraints.biggest;
+    final projection = controller._projection;
+
+    final screenWidth = size.width;
+    final screenHeight = size.height;
+
+    final centerX = screenWidth / 2.0;
+    final centerY = screenHeight / 2.0;
+
+    final scale = pow(2.0, controller._zoom!);
+
+    final norm = projection.fromLngLatToTileIndex(controller._center!);
+    final ttl =
+        TileIndex(norm.x! * tileSize! * scale, norm.y! * tileSize * scale);
+
+    final fixedZoom = (controller._zoom! + 0.0000001).toInt();
+    final fixedPowZoom = pow(2, fixedZoom);
+
+    final centerTileIndexX = (norm.x! * fixedPowZoom).floor();
+    final centerTileIndexY = (norm.y! * fixedPowZoom).floor();
+
+    final scaleValue = pow(2.0, (controller._zoom! % 1));
+    final tileSizeScaled = tileSize! * scaleValue;
+    final numGrids = pow(2.0, controller._zoom!).floor();
+
+    final numTilesX = (screenWidth / tileSize / 2.0).ceil();
+    final numTilesY = (screenHeight / tileSize / 2.0).ceil();
+
+    final children = <Widget>[];
+
+    for (int i = centerTileIndexX - numTilesX;
+        i <= centerTileIndexX + numTilesX;
+        i++) {
+      for (int j = centerTileIndexY - numTilesY;
+          j <= centerTileIndexY + numTilesY;
+          j++) {
+        if (i < 0 || i >= numGrids || j < 0 || j >= numGrids) {
+          continue;
+        }
+
+        final ox = (i * tileSizeScaled) + centerX - ttl.x!;
+        final oy = (j * tileSizeScaled) + centerY - ttl.y!;
+
+        final tile = widget.provider!
+            .getTile(i, j, (controller._zoom! + 0.0000001).floor());
+
+        final child = Positioned(
+          width: tileSizeScaled.ceilToDouble(),
+          height: tileSizeScaled.ceilToDouble(),
+          left: ox.floorToDouble(),
+          top: oy.floorToDouble(),
+          child: Container(
+            color: Colors.grey,
+            child: Image(
+              image: tile,
+              fit: BoxFit.fill,
+            ),
+          ),
+        );
+
+        children.add(child);
+      }
+    }
+
+    final stack = Stack(children: children);
+    return stack;
+  }
+}
+
+class MapController extends ChangeNotifier {
+  CustomLatLng? _center;
+  double? _zoom;
+  double? tileSize;
+
+  final _projection = EPSG4326();
+
+  MapController({
+    required CustomLatLng location,
+    double zoom = 14,
+    this.tileSize = 256,
+  }) {
+    _center = location;
+    _zoom = zoom;
+  }
+
+  void drag(double dx, double dy) {
+    var scale = pow(2.0, _zoom!);
+    final mon = _projection.fromLngLatToTileIndex(_center!);
+
+    mon.x = (dx / tileSize!) / scale;
+    mon.y = (dy / tileSize!) / scale;
+
+    center = _projection.fromTileIndexToLngLat(mon);
+  }
+
+  @Deprecated('Please use [center].')
+  CustomLatLng get location {
+    return _center!;
+  }
+
+  @Deprecated('Please use [center].')
+  set location(CustomLatLng center) {
+    _center = center;
+    notifyListeners();
+  }
+
+  CustomLatLng get center {
+    return _center!;
+  }
+
+  set center(CustomLatLng center) {
+    _center = center;
+    notifyListeners();
+  }
+
+  double get zoom {
+    return _zoom!;
+  }
+
+  set zoom(double zoom) {
+    _zoom = zoom;
+    notifyListeners();
+  }
+
+  // ==========================================
+  // TRACCAR API POSITIONS & SOCKET INTEGRATION
+  // ==========================================
+
+  /// Updates map center directly from a Traccar position JSON payload (`/api/positions` or `/api/socket`)
+  void updateCenterFromTraccar(Map<String, dynamic> positionJson) {
+    if (positionJson.containsKey('latitude') &&
+        positionJson.containsKey('longitude')) {
+      final double? lat =
+          double.tryParse(positionJson['latitude']?.toString() ?? '');
+      final double? lng =
+          double.tryParse(positionJson['longitude']?.toString() ?? '');
+
+      if (lat != null && lng != null) {
+        center = CustomLatLng(lat, lng);
+      }
+    }
+  }
+
+  /// Centers map onto raw coordinates with optional zoom adjustment
+  void moveToTraccarPosition(double lat, double lng, {double? zoomLevel}) {
+    if (zoomLevel != null) {
+      _zoom = zoomLevel;
+    }
+    center = CustomLatLng(lat, lng);
+  }
+
+  /// Fits map center to bound all points from Traccar route report (`/api/reports/route`)
+  void fitTraccarPositions(List<dynamic> positionsList) {
+    if (positionsList.isEmpty) return;
+
+    double minLat = 90.0, maxLat = -90.0;
+    double minLng = 180.0, maxLng = -180.0;
+    int count = 0;
+
+    for (var pos in positionsList) {
+      if (pos is Map<String, dynamic> &&
+          pos.containsKey('latitude') &&
+          pos.containsKey('longitude')) {
+        final double? lat = double.tryParse(pos['latitude']?.toString() ?? '');
+        final double? lng = double.tryParse(pos['longitude']?.toString() ?? '');
+
+        if (lat != null && lng != null) {
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+          if (lng < minLng) minLng = lng;
+          if (lng > maxLng) maxLng = lng;
+          count++;
+        }
+      }
+    }
+
+    if (count > 0) {
+      final double centerLat = (minLat + maxLat) / 2.0;
+      final double centerLng = (minLng + maxLng) / 2.0;
+      center = CustomLatLng(centerLat, centerLng);
+    }
+  }
+}
+
+// class _MapPainter extends CustomPainter
+// {
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     // TODO: implement paint
+//   }
+
+//   @override
+//   bool shouldRepaint(CustomPainter oldDelegate) {
+//     // TODO: implement shouldRepaint
+//     throw UnimplementedError();
+//   }
+// }

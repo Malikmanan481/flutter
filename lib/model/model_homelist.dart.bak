@@ -1,0 +1,43 @@
+import 'package:speedotrack/model/model_object_fn.dart';
+import 'package:speedotrack/model/model_sensor_home.dart';
+
+class HomeListItem {
+  final bool fuel;
+  final String lat;
+  final String lng;
+  final String statusMessage;
+  final String status;
+  final int speed;
+  final String name;
+  final String angle;
+  final String engineHoursString;
+  final String imei;
+  final String gps;
+  final String connection;
+  final List<SensorModelHome> sensorModelAbove;
+  final bool expired;
+  final String expiredText;
+  final List<dynamic> fnSettingString;
+  final ObjectDataModel objectDataModel;
+  final String imageName;
+
+  HomeListItem(
+      this.fuel,
+      this.lat,
+      this.lng,
+      this.statusMessage,
+      this.status,
+      this.speed,
+      this.name,
+      this.angle,
+      this.engineHoursString,
+      this.imei,
+      this.gps,
+      this.connection,
+      this.sensorModelAbove,
+      this.expired,
+      this.expiredText,
+      this.fnSettingString,
+      this.objectDataModel,
+      this.imageName);
+}

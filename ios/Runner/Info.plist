@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>ETTS</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>ETTS</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>sms</string>
+		<string>tel</string>
+	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<!-- NOTE: iOS does NOT match NSExceptionDomains keys against bare IP
+		     address literals (only DNS domain names). This 212.56.40.116
+		     entry is therefore inert at runtime; cleartext HTTP to the IP
+		     is permitted solely by NSAllowsArbitraryLoads above. Do not
+		     remove NSAllowsArbitraryLoads expecting this exception to cover
+		     it — that would break all HTTP. The real fix is a DNS hostname
+		     (then this exception becomes meaningful and ATS can be scoped). -->
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>212.56.40.116</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>This app requires Apple Music access to function properly.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>This app requires Calendar access to function properly.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app requires Camera access to function qrscan properly.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>This app requires contacts access to function properly.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>This app required biometric authentication if user wants to add extra security to access app.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We are using Phone GPS location for checking distance between current phone location to GPS device Location. we are not storing Phone location to server or anywhere.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We are using Phone GPS location for checking distance between current phone location to GPS device Location. we are not storing Phone location to server or anywhere.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We are using Phone GPS location for checking distance between current phone location to GPS device Location. we are not storing Phone location to server or anywhere.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>This app requires Motion access to function properly.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>This app requires Speech Recognition access to function properly.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+</dict>
+</plist>

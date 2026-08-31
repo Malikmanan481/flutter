@@ -1,0 +1,308 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_common/get_reset.dart';
+import 'package:html/parser.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/model/model_object_fn.dart';
+import 'package:speedotrack/model/model_settings_fn.dart';
+
+class VehicleInfoModel {
+  final String? name;
+  final String? status;
+  final String? image;
+
+  VehicleInfoModel(this.name, this.status, this.image);
+}
+
+class VehicleActivity extends StatefulWidget {
+  final String? name;
+  final String? imei;
+
+  const VehicleActivity({Key? key, @required this.name, @required this.imei})
+      : super(key: key);
+
+  @override
+  _VehicleActivityState createState() =>
+      _VehicleActivityState(name: name, imei: imei);
+}
+
+class _VehicleActivityState extends State<VehicleActivity> {
+  final String? name;
+  final String? imei;
+  bool loading = false;
+
+  _VehicleActivityState({this.name, this.imei});
+
+  List<VehicleInfoModel> vehicleInfoModelArray = [];
+  String? gps, connection, ignition, ignitionText, expiry;
+  Map<String, dynamic> customFields = {};
+
+  @override
+  void initState() {
+    super.initState();
+    /*FnSettingsModel dataSettingModel =
+    FnSettingsModel.fromJson(jsonDecode(Globals.prefs.getString('${imei}_settings')));*/
+
+    VehicleSettingsModel vehicleSettingsModel = VehicleSettingsModel.fromJson(
+        jsonDecode(Globals.prefs!.getString('${imei}_settings')!));
+
+    ObjectDataModel objectDataModel = ObjectDataModel.fromJson(
+        jsonDecode(Globals.prefs!.getString('${imei}_objects')!));
+    Map<String, dynamic> sensorsJsonObject = {};
+    try {
+      /*sensorsJsonObject = dataSettingModel.sensors;*/
+    } catch (e) {}
+    List<String> sensorsKeysJsonArray = [];
+    if (sensorsJsonObject != null) {
+      sensorsKeysJsonArray = sensorsJsonObject.keys.toList();
+    }
+    switch (objectDataModel.cn) {
+      case 0:
+        gps = 'no';
+        connection = 'no';
+        break;
+      case 2:
+        gps = 'yes';
+        connection = 'yes';
+        break;
+      case 1:
+        gps = 'no';
+        connection = 'yes';
+        break;
+    }
+    for (int j = 0; j < sensorsKeysJsonArray.length; j++) {
+      String sensorID = sensorsKeysJsonArray[j];
+      Sensors? sensorJsonObject = sensorsJsonObject[sensorID];
+      String? type = sensorJsonObject!.type;
+      if (type == 'acc') {
+        String text0 = sensorJsonObject.text0!;
+        String text1 = sensorJsonObject.text1!;
+        List<dynamic> dArray = objectDataModel.d!;
+        if (dArray.length != 0) {
+          List<dynamic> d0Array = objectDataModel.d![0];
+          if (d0Array[7]['acc'] == '1') {
+            ignition = text1;
+          } else {
+            ignition = text0;
+          }
+        }
+        ignitionText = sensorJsonObject.name;
+      } else {
+        ignitionText = 'gone';
+        ignition = 'gone';
+      }
+    }
+    expiry = vehicleSettingsModel.objectExpireDate ?? 'No Data';
+    try {
+      /*customFields = vehicleSettingsModel.customFields ?? {};*/
+    } catch (e) {}
+    vehicleInfoModelArray
+        .add(VehicleInfoModel('IMEI', imei, 'images/vehicleInfoImeiIcon.png'));
+    /*vehicleInfoModelArray.add(VehicleInfoModel(
+        'Plate Number', objectExpireDate.plateNumber, 'images/vehicleInfoPlateNumberIcon.png'));*/
+    vehicleInfoModelArray.add(VehicleInfoModel('Sim Number',
+        vehicleSettingsModel.simNumber, 'images/vehicleInfoSimNoIcon.png'));
+    vehicleInfoModelArray.add(VehicleInfoModel(
+        'odometer'.tr,
+        '${vehicleSettingsModel.odometer}Km',
+        'images/vehicleInfoOdometerIcon.png'));
+    vehicleInfoModelArray.add(VehicleInfoModel(
+        'expiryDate'.tr, expiry, 'images/vehicleInfoExpiryDateIcon.png'));
+    vehicleInfoModelArray.add(VehicleInfoModel(
+        'device'.tr,
+        vehicleSettingsModel.device.toString(),
+        'images/vehicleInfoDeviceIcon.png'));
+    vehicleInfoModelArray.add(VehicleInfoModel(
+        'internet'.tr, connection, 'images/vehicleInfoInternetIcon.png'));
+    vehicleInfoModelArray
+        .add(VehicleInfoModel('GPS', gps, 'images/vehicleInfoGpsIcon.png'));
+    vehicleInfoModelArray.add(VehicleInfoModel('Engine Hours',
+        objectDataModel.eh, 'images/vehicleInfoEngineHoursIcon.png'));
+    if (objectDataModel.sr!.isNotEmpty) {
+      for (int i = 0; i < objectDataModel.sr!.length; i++) {
+        Map<String, dynamic> serviceJsonObject = objectDataModel.sr![i];
+        String name = serviceJsonObject['name'];
+        String status = serviceJsonObject['status'];
+        String image = 'images/simVehicle.png';
+        switch (name) {
+          case 'AC Filter':
+            image = 'images/acFilterChangeIcon.png';
+            break;
+          case 'Fitness':
+            image = 'images/carFitnessIcon.png';
+            break;
+          case 'Engine Oil':
+            image = 'images/engineOilChangeIcon.png';
+            break;
+          case 'Insurance':
+            image = 'images/insuranceIcon.png';
+            break;
+          case 'Oil Filter':
+            image = 'images/oilFilterChangeIcon.png';
+            break;
+          case 'Route Permit':
+            image = 'images/routePermitIcon.png';
+            break;
+          case 'Tax Token':
+            image = 'images/taxTokenIcon.png';
+            break;
+          case 'Tyre Change':
+            image = 'images/tyreChangeIcon.png';
+            break;
+        }
+        String statusDecoded = '';
+        try {
+          var document = parse(status);
+          statusDecoded = document.body!.text;
+        } catch (e) {
+          statusDecoded = status;
+        }
+        vehicleInfoModelArray.add(VehicleInfoModel(name, statusDecoded, image));
+      }
+    }
+    if (customFields.isNotEmpty) {
+      List<String> jsonArray = [];
+      jsonArray = customFields.keys.toList();
+      for (int i = 0; i < jsonArray.length; i++) {
+        /*CustomFields customFieldJsonObject = customFields[jsonArray[i]];*/
+        /*String name = customFieldJsonObject.name;
+        String status = customFieldJsonObject.value;*/
+        String image = 'images/simVehicle.png';
+        switch (name) {
+          case "Remote Shutdown":
+            image = 'images/simVehicle.png';
+            break;
+          case "Voice":
+            image = 'images/simVehicle.png';
+            break;
+        }
+        vehicleInfoModelArray.add(VehicleInfoModel(name, "status", image));
+      }
+    }
+    setState(() {
+      loading = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double _crossAxisSpacing = 0, _mainAxisSpacing = 0, _aspectRatio = 2.4;
+    int _crossAxisCount = 2;
+    return Scaffold(
+      backgroundColor: Color(0xFFF6F6F6),
+      appBar: AppBar(
+        backgroundColor: Globals.appColor,
+        elevation: 0.0,
+        title: Text(
+          '${name!}',
+          style:
+              TextStyle(color: Color(0xFFF6F6F6), fontFamily: 'Baloo_Thambi_2'),
+        ),
+        iconTheme: IconThemeData(
+          color: Color(0xFFF6F6F6), //change your color here
+        ),
+      ),
+      body: loading
+          ? GridView.builder(
+              itemCount: vehicleInfoModelArray.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: _crossAxisCount,
+                crossAxisSpacing: _crossAxisSpacing,
+                mainAxisSpacing: _mainAxisSpacing,
+                childAspectRatio: _aspectRatio,
+              ),
+              itemBuilder: (BuildContext context, int index) {
+                return Padding(
+                  padding: const EdgeInsets.all(5.0),
+                  child: Card(
+                    elevation: 5,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(5))),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: <Widget>[
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 5.0),
+                                    child: Text(
+                                      '${vehicleInfoModelArray[index].name}',
+                                      maxLines: 1,
+                                      textAlign: TextAlign.start,
+                                      style: TextStyle(
+                                          color: Globals.appColor,
+                                          fontSize: 12,
+                                          letterSpacing: 1.3,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Montserrat'),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 5,
+                                ),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 5.0),
+                                    child: Text(
+                                      '${vehicleInfoModelArray[index].status!}',
+                                      maxLines: 1,
+                                      textAlign: TextAlign.start,
+                                      style: TextStyle(
+                                          color: vehicleInfoModelArray[index]
+                                                  .status!
+                                                  .contains('EXPIRED')
+                                              ? Colors.red
+                                              : Color(0xFF7E8188),
+                                          fontSize: 10,
+                                          letterSpacing: 1.3,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Montserrat'),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: SizedBox(
+                              height: 40,
+                              width: 40,
+                              child: Padding(
+                                padding: const EdgeInsets.all(10.0),
+                                child: Image.asset(
+                                  vehicleInfoModelArray[index].image!,
+                                  color: Globals.appColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            )
+          : Center(
+              child: CircularProgressIndicator(
+                  backgroundColor: Color(0xFFF6F6F6),
+                  valueColor: new AlwaysStoppedAnimation<Color>(
+                    Globals.appColor,
+                  )),
+            ),
+    );
+  }
+}

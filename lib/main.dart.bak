@@ -1,0 +1,249 @@
+import 'dart:convert';
+import 'package:get/get.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+import 'package:speedotrack/activity/activity_splash_screen.dart';
+import 'package:speedotrack/firebase_options.dart';
+import 'package0speedotrack/globals.dart';
+import 'package:speedotrack/locale/translation_service.dart';
+import 'package:speedotrack/service/push_notification_manager.dart';
+import 'package:speedotrack/service/notification_service.dart'; // Local Voice Notification Service
+import 'package:speedotrack/providers/notification_provider.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  String eventType = message.data['type'] ?? message.data['event'] ?? '';
+  String soundName = getSoundNameByEvent(eventType);
+
+  await NotificationService().showVoiceNotification(
+    id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    title: message.notification?.title ?? message.data['title'] ?? 'Vehicle Alert',
+    body: message.notification?.body ?? message.data['body'] ?? 'Traccar Event Triggered',
+    soundName: soundName,
+  );
+}
+
+String getSoundNameByEvent(String eventType, {String? commandType}) {
+
+  if (commandType != null || eventType.contains('engine') || eventType.contains('command')) {
+    if (eventType == 'engineStop' || commandType == 'engineStop' || eventType == 'commandEngineStop') {
+      return 'mobi_on'; // Gari Kill (Engine Cut Off) sound
+    }
+    if (eventType == 'engineResume' || commandType == 'engineResume' || eventType == 'commandEngineResume') {
+      return 'mobi_off'; // Gari Release (Engine Restored) sound
+    }
+  }
+
+  // 2. Standard Traccar Events mapping
+  switch (eventType) {
+    case 'deviceIgnitionOn':
+      return 'acc_on';
+    case 'deviceIgnitionOff':
+      return 'acc_off';
+    case 'deviceOverspeed':
+      return 'overspeed';
+    case 'geofenceEnter':
+      return 'geofence_in';
+    case 'geofenceExit':
+      return 'geofence_out';
+    case 'alarm':
+      return 'battery_cut';
+    default:
+      return 'acc_on';
+  }
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await Firebase.initializeApp(
+    name: "infinity",
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Initialize Local Voice Notifications Channel
+  await NotificationService().initNotification();
+
+  // Register Background Messaging Handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Handle Foreground Messages (App Active)
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    String eventType = message.data['type'] ?? message.data['event'] ?? '';
+    String soundName = getSoundNameByEvent(eventType);
+
+    NotificationService().showVoiceNotification(
+      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title: message.notification?.title ?? message.data['title'] ?? 'Vehicle Alert',
+      body: message.notification?.body ?? message.data['body'] ?? 'Traccar Event Triggered',
+      soundName: soundName,
+    );
+  });
+
+  Intl.defaultLocale = 'en_US';
+  Globals.prefs = await SharedPreferences.getInstance();
+  PushNotificationsManager().init();
+
+  // Initialize Traccar API backend check on app launch
+  await TraccarBackendInit.initTraccarServer();
+
+  runApp(MultiProvider(providers: [
+    ChangeNotifierProvider(create: (_) => NotificationProvider()),
+  ], child: MyApp()));
+}
+
+String langCode = "en_US";
+Locale? _locale = Locale('en', 'US');
+
+class MyApp extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() => new _MyAppPageState();
+}
+
+class _MyAppPageState extends State<MyApp> {
+  @override
+  void initState() {
+    checkPreference();
+    super.initState();
+  }
+
+  Future<String> checkPreference() async {
+    Globals.prefs!.setString("language", "en");
+
+    // Background Traccar Session Restoration Check (/api/session)
+    TraccarBackendInit.checkActiveSession();
+
+    return langCode;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Globals.appColor,
+      statusBarBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Globals.appColor,
+    ));
+
+    return LayoutBuilder(builder: (context, constraints) {
+      return OrientationBuilder(builder: (context, orientation) {
+        return GetMaterialApp(
+          title: Globals.name,
+          locale: _locale,
+          fallbackLocale: TranslationService.fallbackLocale,
+          translations: TranslationService(),
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+                  primaryColor: Globals.appColor,
+                  useMaterial3: true,
+                  dialogBackgroundColor: Colors.grey[200],
+                  inputDecorationTheme: InputDecorationTheme(
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12),
+                  ),
+                  cardTheme: CardThemeData(
+                    color: Colors.white,
+                  ),
+                  scaffoldBackgroundColor: Colors.white)
+              .copyWith(
+            pageTransitionsTheme: const PageTransitionsTheme(
+              builders: <TargetPlatform, PageTransitionsBuilder>{
+                TargetPlatform.android: ZoomPageTransitionsBuilder(),
+              },
+            ),
+          ),
+          builder: (context, child) {
+            return SafeArea(
+              top: false,
+              child: child!,
+            );
+          },
+          home: SplashScreen(
+            isAppRestarted: false,
+            isFromLogin: true,
+          ),
+        );
+      });
+    });
+  }
+}
+
+// ==========================================
+// TRACCAR API BACKEND INITIALIZER
+// ==========================================
+
+class TraccarBackendInit {
+  static const String defaultServerUrl = 'https://demo.traccar.org';
+
+  /// Fetch Traccar Base Server URL from SharedPreferences
+  static String getServerUrl() {
+    final storedUrl = Globals.prefs?.getString('traccar_server_url');
+    if (storedUrl != null && storedUrl.isNotEmpty) {
+      return storedUrl.endsWith('/') ? storedUrl.substring(0, storedUrl.length - 1) : storedUrl;
+    }
+    return defaultServerUrl;
+  }
+
+  /// Traccar backend server status check on startup (`/api/server`)
+  static Future<bool> initTraccarServer() async {
+    try {
+      final baseUrl = getServerUrl();
+      final url = Uri.parse('$baseUrl/api/server');
+      final response = await http.get(url, headers: {'Accept': 'application/json'}).timeout(
+        const Duration(seconds: 5),
+      );
+
+      if (response.statusCode == 200) {
+        final serverData = jsonDecode(response.body);
+        if (serverData is Map<String, dynamic>) {
+          await Globals.prefs?.setString('traccar_server_info', jsonEncode(serverData));
+        }
+        return true;
+      }
+    } catch (_) {
+      // Graceful error handle on offline launch
+    }
+    return false;
+  }
+
+  /// Traccar Session active status verify karne ke liye (`/api/session`)
+  static Future<bool> checkActiveSession() async {
+    try {
+      final cookie = Globals.prefs?.getString('traccar_session_cookie');
+      if (cookie == null || cookie.isEmpty) return false;
+
+      final baseUrl = getServerUrl();
+      final url = Uri.parse('$baseUrl/api/session');
+      final response = await http.get(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'Cookie': cookie,
+        },
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final userData = jsonDecode(response.body);
+        if (userData is Map<String, dynamic> && userData.containsKey('id')) {
+          await Globals.prefs?.setInt('user_id', userData['id']);
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+}

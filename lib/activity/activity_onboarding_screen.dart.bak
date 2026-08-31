@@ -1,0 +1,18 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:speedotrack/activity/activity_onboarding.dart';
+import 'package:speedotrack/providers/provider_color.dart';
+
+class OnboardingScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Scaffold(
+        body: ChangeNotifierProvider(
+          create: (context) => ColorProvider(),
+          child: Onboarding(),
+        ),
+      ),
+    );
+  }
+}

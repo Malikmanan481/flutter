@@ -1,0 +1,19 @@
+import 'package:flutter/material.dart';
+
+class NotificationProvider extends ChangeNotifier {
+  final List<Map<String, dynamic>> _notifications = [];
+
+  List<Map<String, dynamic>> get notifications => _notifications;
+
+  // Event / Alert add karne ke liye
+  void addNotification(Map<String, dynamic> notificationData) {
+    _notifications.insert(0, notificationData);
+    notifyListeners();
+  }
+
+  // List clear karne ke liye
+  void clearNotifications() {
+    _notifications.clear();
+    notifyListeners();
+  }
+}

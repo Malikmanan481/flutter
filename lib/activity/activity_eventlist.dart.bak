@@ -1,0 +1,227 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:get/get.dart';
+import 'package:flutter/material.dart';
+import 'package:progress_dialog_null_safe/progress_dialog_null_safe.dart';
+import 'package:rxdart/subjects.dart';
+import 'package:speedotrack/activity/activity_about_us.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/network/network_api_request.dart';
+
+class EventList {
+  final String id;
+  final String name;
+  final bool active;
+
+  EventList(this.id, this.name, this.active);
+}
+
+class EventListActivity extends StatefulWidget {
+  @override
+  _EventListActivityState createState() => _EventListActivityState();
+}
+
+class _EventListActivityState extends State<EventListActivity> {
+  StreamController<List<EventList>> _eventListStreamController =
+      BehaviorSubject();
+
+  Stream<List<EventList>> get eventListStream =>
+      _eventListStreamController.stream;
+
+  StreamSink<List<EventList>> get eventListSink =>
+      _eventListStreamController.sink;
+  List<EventList> eventList = [];
+  List<String> nameList = [];
+  Map<String, EventList> zoneList = {};
+  void fetchData() async {
+    var response = await NetworkHelper().requestDataFromNetwork(
+        urlFile: '/func/fn_settings.events.php',
+        body: {
+          'cmd': 'load_event_data',
+        },
+        context: context);
+    eventList.clear();
+    nameList.clear();
+    if (jsonDecode(response).length > 0) {
+      Map<String, dynamic> decoded = jsonDecode(response);
+      for (int index = 0; index < decoded.length; index++) {
+        nameList.add(decoded[decoded.keys.elementAt(index)]['name']
+            .toString()
+            .toLowerCase());
+        eventList.add(EventList(
+            decoded.keys.elementAt(index),
+            decoded[decoded.keys.elementAt(index)]['name'],
+            decoded[decoded.keys.elementAt(index)]['active']
+                    .toString()
+                    .toLowerCase() ==
+                'true'));
+      }
+    }
+    eventListSink.add(eventList);
+    pr!.hide();
+  }
+
+  ProgressDialog? pr;
+  @override
+  void initState() {
+    super.initState();
+    pr = new ProgressDialog(context,
+        type: ProgressDialogType.normal, isDismissible: false, showLogs: false);
+    fetchData();
+  }
+
+  @override
+  void dispose() {
+    _eventListStreamController.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFFF6F6F6),
+      appBar: AppBar(
+        backgroundColor: Globals.appColor,
+        elevation: 0.0,
+        title: Text(
+          'notificationSettings'.tr,
+          style:
+              TextStyle(color: Color(0xFFF6F6F6), fontFamily: 'Baloo_Thambi_2'),
+        ),
+        iconTheme: IconThemeData(
+          color: Color(0xFFF6F6F6), //change your color here
+        ),
+      ),
+      body: Container(
+        color: Color(0xFFF6F6F6),
+        child: StreamBuilder<List<EventList>>(
+            stream: eventListStream,
+            builder: (context, snapshot) {
+              if (snapshot.data == null || snapshot.hasError) {
+                return Center(
+                    child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'fetchData'.tr,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Globals.appColor,
+                          fontSize: 14,
+                          decoration: TextDecoration.none,
+                          letterSpacing: 1,
+                          fontFamily: 'Montserrat'),
+                    ),
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(top: 10, left: 40, right: 40),
+                      child: CircularProgressIndicator(
+                        backgroundColor: Colors.transparent,
+                        strokeWidth: 3,
+                        valueColor:
+                            new AlwaysStoppedAnimation<Color>(Globals.appColor),
+                      ),
+                    ),
+                  ],
+                ));
+              }
+              if (snapshot.data!.length == 0) {
+                return Center(
+                    child: Text(
+                  'noEventDataFound'.tr,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: Globals.appColor,
+                      fontSize: 14,
+                      decoration: TextDecoration.none,
+                      letterSpacing: 1,
+                      fontFamily: 'Montserrat'),
+                ));
+              } else {
+                return ListView.builder(
+                  itemCount: snapshot.data!.length,
+                  scrollDirection: Axis.vertical,
+                  addAutomaticKeepAlives: true,
+                  physics: BouncingScrollPhysics(),
+                  cacheExtent: 10000,
+                  itemBuilder: (context, index) {
+                    bool last = snapshot.data!.length == (index + 1);
+                    return Padding(
+                      padding: last
+                          ? EdgeInsets.only(bottom: 60)
+                          : EdgeInsets.only(bottom: 0),
+                      child: InkWell(
+                          onTap: () {},
+                          child: Card(
+                            shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(5))),
+                            elevation: 5,
+                            color: Colors.white,
+                            child: Padding(
+                              padding: const EdgeInsets.all(10.0),
+                              child: Container(
+                                height: 50,
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      snapshot.data![index].name,
+                                      textAlign: TextAlign.start,
+                                      style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          letterSpacing: 1.3,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Montserrat'),
+                                    ),
+                                    Spacer(),
+                                    Spacer(),
+                                    Switch(
+                                        activeColor: Color(0xFFF6F6F6),
+                                        activeTrackColor: Colors.green,
+                                        inactiveThumbColor: Color(0xFFF6F6F6),
+                                        inactiveTrackColor: Colors.red,
+                                        value: snapshot.data![index].active,
+                                        onChanged: (value) async {
+                                          pr!.show();
+                                          var response = await NetworkHelper()
+                                              .requestDataFromNetwork(
+                                                  urlFile:
+                                                      '/func/fn_settings.events.php',
+                                                  body: {
+                                                    'cmd': 'activate_event',
+                                                    'event_id': snapshot
+                                                        .data![index].id,
+                                                    'active':
+                                                        '${!snapshot.data![index].active}'
+                                                  },
+                                                  context: context);
+                                          if (response
+                                                  .toString()
+                                                  .toLowerCase() ==
+                                              'ok') {
+                                            fetchData();
+                                          }
+                                        })
+                                  ],
+                                ),
+                              ),
+                            ),
+                          )),
+                    );
+                  },
+                );
+              }
+            }),
+      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {},
+      //   backgroundColor: Globals.appColor,
+      //   child: Icon(Icons.add),
+      // ),
+    );
+  }
+}

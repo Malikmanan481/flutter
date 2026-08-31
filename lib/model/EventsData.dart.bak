@@ -1,0 +1,36 @@
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+class EventsData {
+  String? object, position, altitude, angle, time, event, speed;
+  LatLng? latLng;
+
+  EventsData(
+      {this.angle,
+      this.altitude,
+      this.event,
+      this.speed,
+      this.time,
+      this.object,
+      this.position,
+      this.latLng});
+
+  EventsData.fromJson(Map<String, dynamic> json) {
+    object = json["title"];
+    position = json["position"];
+    altitude = json["altitude"];
+    angle = json["angle"];
+    time = json["time"];
+    event = json["event"];
+    speed = json["speed"];
+  }
+
+  Map<String, dynamic> toJson() => {
+        'object': object,
+        'position': position,
+        'altitude': altitude,
+        'angle': angle,
+        'time': time,
+        'event': event,
+        'speed': speed,
+      };
+}

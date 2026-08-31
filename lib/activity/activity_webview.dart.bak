@@ -1,0 +1,81 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+
+class ActivityWebView extends StatefulWidget {
+  final String? url;
+  final String? title;
+
+  const ActivityWebView({Key? key, this.url, this.title}) : super(key: key);
+
+  @override
+  _ActivityWebViewState createState() => _ActivityWebViewState(url, title);
+}
+
+class _ActivityWebViewState extends State<ActivityWebView> {
+  final String? url;
+  final String? title;
+  final Completer<WebViewController> _controller =
+      Completer<WebViewController>();
+  bool isLoading = true;
+
+  _ActivityWebViewState(this.url, this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        backgroundColor: Color(0xFFF6F6F6),
+        appBar: AppBar(
+          backgroundColor: Globals.appColor,
+          elevation: 0.0,
+          title: Text(
+            title!.toUpperCase(),
+            style: TextStyle(
+                color: Color(0xFFF6F6F6), fontFamily: 'Baloo_Thambi_2'),
+          ),
+          iconTheme: IconThemeData(
+            color: Color(0xFFF6F6F6), //change your color here
+          ),
+        ),
+        body: Stack(
+          children: <Widget>[
+            // WebView(
+            //   initialUrl: url,
+            //   javascriptMode: JavascriptMode.unrestricted,
+            //   onWebViewCreated: (WebViewController webViewController) {
+            //     _controller.complete(webViewController);
+            //   },
+            //   navigationDelegate: (NavigationRequest request) {
+            //     if (request.url.startsWith('https://www.youtube.com/')) {
+            //       return NavigationDecision.prevent;
+            //     }
+            //     return NavigationDecision.navigate;
+            //   },
+            //   onPageStarted: (String url) {
+            //     setState(() {
+            //       isLoading = true;
+            //     });
+            //   },
+            //   onPageFinished: (String url) {
+            //     setState(() {
+            //       isLoading = false;
+            //     });
+            //   },
+            //   gestureNavigationEnabled: true,
+            // ),
+            Visibility(
+              visible: isLoading,
+              child: Center(
+                child: CircularProgressIndicator(
+                    backgroundColor: Color(0xFFF6F6F6),
+                    valueColor: new AlwaysStoppedAnimation<Color>(
+                      Globals.appColor,
+                    )),
+              ),
+            ),
+          ],
+        ));
+  }
+}

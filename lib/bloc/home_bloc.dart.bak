@@ -1,0 +1,31 @@
+import 'dart:async';
+
+import 'package:rxdart/subjects.dart';
+import 'package:speedotrack/bloc/bloc_home_item.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/helper/helper.dart';
+import 'package:speedotrack/sharedPrefs/main_prefs.dart';
+
+class HomeBloc {
+  StreamController<List<HomeItem>> _homeListStreamController =
+      BehaviorSubject();
+
+  //<List<HomeItem>>();
+
+  Stream<List<HomeItem>> get homeListStream => _homeListStreamController.stream;
+
+  StreamSink<List<HomeItem>> get homeListSink => _homeListStreamController.sink;
+
+  HomeBloc() {
+    homeListSink.add(Helper()
+        .homeScreenSetup(Globals.prefs!.getStringList(MainPrefs.keyIMEI)!));
+  }
+
+  bool isClosed() {
+    return _homeListStreamController.isClosed;
+  }
+
+  void dispose() {
+    _homeListStreamController.close();
+  }
+}

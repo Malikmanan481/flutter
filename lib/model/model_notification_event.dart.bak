@@ -1,0 +1,275 @@
+import 'dart:convert';
+
+class NotificationEventModel {
+  String? name;
+  String? imei;
+  String? eventDesc;
+  DateTime? dtServer;
+  DateTime? dtTracker;
+  String? lat;
+  String? lng;
+  String? altitude;
+  String? angle;
+  int? speed;
+  Params? params;
+
+  NotificationEventModel({
+    this.name,
+    this.imei,
+    this.eventDesc,
+    this.dtServer,
+    this.dtTracker,
+    this.lat,
+    this.lng,
+    this.altitude,
+    this.angle,
+    this.speed,
+    this.params,
+  });
+
+  factory NotificationEventModel.fromJson(Map<String, dynamic> json) => NotificationEventModel(
+        name: json["name"],
+        imei: json["imei"],
+        eventDesc: json["event_desc"],
+        dtServer: DateTime.parse(json["dt_server"]),
+        dtTracker: DateTime.parse(json["dt_tracker"]),
+        lat: json["lat"],
+        lng: json["lng"],
+        altitude: json["altitude"],
+        angle: json["angle"],
+        speed: json["speed"],
+        params: Params.fromJson(json["params"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "name": name,
+        "imei": imei,
+        "event_desc": eventDesc,
+        "dt_server": dtServer!.toIso8601String(),
+        "dt_tracker": dtTracker!.toIso8601String(),
+        "lat": lat,
+        "lng": lng,
+        "altitude": altitude,
+        "angle": angle,
+        "speed": speed,
+        "params": params!.toJson(),
+      };
+}
+
+class Params {
+  String? fuel1;
+  String? acc;
+
+  Params({
+    this.fuel1,
+    this.acc,
+  });
+
+  factory Params.fromJson(Map<String, dynamic> json) => Params(
+        fuel1: json["fuel1"],
+        acc: json["acc"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "fuel1": fuel1,
+        "acc": acc,
+      };
+}
+
+
+class NotificationScreenEvent {
+  String? eventId;
+  String? userId;
+  String? type;
+  String? eventDesc;
+  String? notifySystem;
+  String? notifyPush;
+  String? notifyArrow;
+  String? notifyArrowColor;
+  String? notifyOhc;
+  String? notifyOhcColor;
+  String? imei;
+  String? name;
+  String? dtServer;
+  String? dtTracker;
+  String? lat;
+  String? lng;
+  String? altitude;
+  String? angle;
+  String? speed;
+  Map<String, dynamic>? params;
+
+  NotificationScreenEvent({
+    this.eventId,
+    this.userId,
+    this.type,
+    this.eventDesc,
+    this.notifySystem,
+    this.notifyPush,
+    this.notifyArrow,
+    this.notifyArrowColor,
+    this.notifyOhc,
+    this.notifyOhcColor,
+    this.imei,
+    this.name,
+    this.dtServer,
+    this.dtTracker,
+    this.lat,
+    this.lng,
+    this.altitude,
+    this.angle,
+    this.speed,
+    this.params,
+  });
+
+  factory NotificationScreenEvent.fromJson(Map<String, dynamic> json) {
+    return NotificationScreenEvent(
+      eventId: json['event_id'],
+      userId: json['user_id'],
+      type: json['type'],
+      eventDesc: json['event_desc'],
+      notifySystem: json['notify_system'],
+      notifyPush: json['notify_push'],
+      notifyArrow: json['notify_arrow'],
+      notifyArrowColor: json['notify_arrow_color'],
+      notifyOhc: json['notify_ohc'],
+      notifyOhcColor: json['notify_ohc_color'],
+      imei: json['imei'],
+      name: json['name'],
+      dtServer: json['dt_server'],
+      dtTracker: json['dt_tracker'],
+      lat: json['lat'],
+      lng: json['lng'],
+      altitude: json['altitude'],
+      angle: json['angle'],
+      speed: json['speed'],
+      params: jsonDecode(json['params']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'event_id': eventId,
+      'user_id': userId,
+      'type': type,
+      'event_desc': eventDesc,
+      'notify_system': notifySystem,
+      'notify_push': notifyPush,
+      'notify_arrow': notifyArrow,
+      'notify_arrow_color': notifyArrowColor,
+      'notify_ohc': notifyOhc,
+      'notify_ohc_color': notifyOhcColor,
+      'imei': imei,
+      'name': name,
+      'dt_server': dtServer,
+      'dt_tracker': dtTracker,
+      'lat': lat,
+      'lng': lng,
+      'altitude': altitude,
+      'angle': angle,
+      'speed': speed,
+      'params': jsonEncode(params),
+    };
+  }
+}
+
+
+
+
+
+class NotificationDetailEvent {
+  String? eventId;
+  String? userId;
+  String? type;
+  String? eventDesc;
+  String? notifySystem;
+  String? notifyPush;
+  String? notifyArrow;
+  String? notifyArrowColor;
+  String? notifyOhc;
+  String? notifyOhcColor;
+  String? imei;
+  String? name;
+  String? dtServer;
+  String? dtTracker;
+  String? lat;
+  String? lng;
+  String? altitude;
+  String? angle;
+  int? speed;
+  Map<String, dynamic>? params;
+
+  NotificationDetailEvent({
+    this.eventId,
+    this.userId,
+    this.type,
+    this.eventDesc,
+    this.notifySystem,
+    this.notifyPush,
+    this.notifyArrow,
+    this.notifyArrowColor,
+    this.notifyOhc,
+    this.notifyOhcColor,
+    this.imei,
+    this.name,
+    this.dtServer,
+    this.dtTracker,
+    this.lat,
+    this.lng,
+    this.altitude,
+    this.angle,
+    this.speed,
+    this.params,
+  });
+
+  factory NotificationDetailEvent.fromJson(Map<String, dynamic> json) {
+    return NotificationDetailEvent(
+      eventId: json['event_id'],
+      userId: json['user_id'],
+      type: json['type'],
+      eventDesc: json['event_desc'],
+      notifySystem: json['notify_system'],
+      notifyPush: json['notify_push'],
+      notifyArrow: json['notify_arrow'],
+      notifyArrowColor: json['notify_arrow_color'],
+      notifyOhc: json['notify_ohc'],
+      notifyOhcColor: json['notify_ohc_color'],
+      imei: json['imei'],
+      name: json['name'],
+      dtServer: json['dt_server'],
+      dtTracker: json['dt_tracker'],
+      lat: json['lat'],
+      lng: json['lng'],
+      altitude: json['altitude'],
+      angle: json['angle'],
+      speed: json['speed'],
+      params: jsonDecode(json['params']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'event_id': eventId,
+      'user_id': userId,
+      'type': type,
+      'event_desc': eventDesc,
+      'notify_system': notifySystem,
+      'notify_push': notifyPush,
+      'notify_arrow': notifyArrow,
+      'notify_arrow_color': notifyArrowColor,
+      'notify_ohc': notifyOhc,
+      'notify_ohc_color': notifyOhcColor,
+      'imei': imei,
+      'name': name,
+      'dt_server': dtServer,
+      'dt_tracker': dtTracker,
+      'lat': lat,
+      'lng': lng,
+      'altitude': altitude,
+      'angle': angle,
+      'speed': speed,
+      'params': jsonEncode(params),
+    };
+  }
+}
+

@@ -1,0 +1,40 @@
+import 'package:flutter/material.dart';
+import 'package:speedotrack/activity/activity_tracking.dart';
+
+class TrackingOverlay {
+  OverlayEntry? _overlayEntry;
+
+  void showTrackingOverlay({
+    required BuildContext context,
+    required String lat,
+    required String lng,
+    required int speed,
+    required String angle,
+    required String name,
+    required String imei,
+    required String status,
+    required String statusMessage,
+  }) {
+    _overlayEntry = OverlayEntry(
+        builder: (context) => Stack(children: [
+              TrackingActivity(
+                lat: lat,
+                lng: lng,
+                speed: speed,
+                angle: angle,
+                name: name,
+                imei: imei,
+                status: status,
+                statusMessage: statusMessage,
+              ),
+            ]));
+
+    // Insert the overlay entry into the overlay
+    Overlay.of(context)?.insert(_overlayEntry!);
+  }
+
+  void hideTrackingOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+}

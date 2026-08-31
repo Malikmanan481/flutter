@@ -1,0 +1,8 @@
+import 'package:flutter/material.dart';
+
+class SensorModel {
+  final Image iconName;
+  final Text text;
+
+  SensorModel(this.iconName, this.text);
+}

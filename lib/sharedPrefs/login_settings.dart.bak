@@ -1,0 +1,12 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+class LoginSettings {
+  static String email = 'email';
+  static String password = 'pswd';
+  static String notificationToken = 'token';
+
+  Future<SharedPreferences> setLoginPrefs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs;
+  }
+}

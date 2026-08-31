@@ -1,0 +1,47 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+class SettingsPrefs {
+  // ignore: non_constant_identifier_names
+  String MOVING_VEHICLE = 'moving_color';
+
+  // ignore: non_constant_identifier_names
+  String STOPPED_VEHICLE = 'stopped_color';
+
+  // ignore: non_constant_identifier_names
+  String OFFLINE_VEHICLE = 'offine_color';
+
+  // ignore: non_constant_identifier_names
+  String NO_DATA_VEHICLE = 'no_data_color';
+
+  // ignore: non_constant_identifier_names
+  String IDLE_VEHICLE = 'offline_color';
+
+  // ignore: non_constant_identifier_names
+  String IS_NOTIFICATION = 'is_notification';
+
+  // ignore: non_constant_identifier_names
+  String THEME_COLOR = 'themeColor';
+
+  // ignore: non_constant_identifier_names
+  String CHOOSE_ICON = 'choose_icon';
+
+  // ignore: non_constant_identifier_names
+  String UNIQUE_NUMBER = 'unique_number';
+
+  // ignore: non_constant_identifier_names
+  String MAP_TYPE = 'map_type';
+
+  // ignore: non_constant_identifier_names
+  String ISNOTIFICATION = 'is_notification';
+
+  // ignore: non_constant_identifier_names
+  String LOCALE = 'locale';
+
+  // ignore: non_constant_identifier_names
+  String IS_CUSTOM_MARKER = 'is_custom_marker';
+
+  Future<SharedPreferences> setSettingsPrefs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs;
+  }
+}

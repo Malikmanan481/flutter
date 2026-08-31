@@ -1,0 +1,105 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:speedotrack/globals.dart';
+
+// ignore: must_be_immutable
+class CustomTextFormFieldWithDataTime extends StatelessWidget {
+  CustomTextFormFieldWithDataTime(
+      {this.controller, this.enabled = true, @required this.onChanged});
+
+  TextEditingController? controller;
+  bool? enabled;
+  Function(String?)? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      enabled: enabled,
+      maxLines: 1,
+      validator: (value) {
+        if (value!.isEmpty) {
+          return "Field can't be empty";
+        }
+        return null;
+      },
+      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        contentPadding:
+            EdgeInsets.only(top: 10, bottom: 10, left: 12, right: 12),
+        border: OutlineInputBorder(
+          /*borderSide: const BorderSide(
+            color: Colors.indigo,
+            width: 2,
+          ),*/
+          borderRadius: BorderRadius.circular(5.0),
+        ),
+        suffixIcon: Padding(
+          padding: const EdgeInsets.only(top: 10.0, bottom: 10.0),
+          child: InkWell(
+            // onTap: () {
+            //   DateTime initialDate;
+            //   try {
+            //     initialDate = DateFormat("yyyyMM-dd").parse(controller!.text);
+            //   } catch (e) {
+            //     print(e);
+            //     initialDate = DateTime.now();
+            //   }
+            //   showDatePicker(
+            //       context: context,
+            //       initialDate: initialDate,
+            //       firstDate: initialDate,
+            //       lastDate: DateTime(2101))
+            //       .then((dateTime) {
+            //     controller!.text = DateFormat("yyyy-MM-dd").format(dateTime!);
+            //   });
+            // },
+            // child: Image.asset(
+            //   'images/date-time.png',
+            //   width: 5,
+            //   height: 5,
+            // ),
+            onTap: () async {
+              await showDatePicker(
+                context: context,
+                initialDate: DateFormat("yyyy-MM-dd").parse(controller!.text),
+                firstDate: DateFormat("yyyy-MM-dd").parse(controller!.text),
+                builder: (BuildContext context, Widget? child) {
+                  return Theme(
+                    data: ThemeData.light().copyWith(
+                      useMaterial3: false,
+                      primaryColor: Globals.appColor,
+                      dialogBackgroundColor: Colors.white,
+                      timePickerTheme: TimePickerThemeData(
+                        dialHandColor: Globals.appColor,
+                      ),
+                      textTheme: TextTheme(),
+                      colorScheme: ColorScheme.light(
+                        primary: Globals.appColor,
+                        onSurface: Colors.black,
+                        onBackground: Colors.orange,
+                      ),
+                    ),
+                    child: child!,
+                  );
+                },
+                lastDate: DateTime(2101),
+              ).then((dateTime) {
+                controller!.text = DateFormat("yyyy-MM-dd").format(dateTime!);
+              });
+            },
+            child: Image.asset(
+              'images/calendar.png',
+              width: 5,
+              height: 5,
+            ),
+          ),
+        ),
+        //     fillColor: Colors.black,
+      ),
+      textInputAction: TextInputAction.next,
+      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+      onChanged: onChanged,
+    );
+  }
+}

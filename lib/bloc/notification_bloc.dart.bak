@@ -1,0 +1,25 @@
+import 'dart:async';
+
+import 'package:rxdart/subjects.dart';
+import 'package:speedotrack/fragments/fragment_notification.dart';
+
+class NotificationBloc {
+  StreamController<List<NotificationItemModel>> _notificationListStreamController =
+      BehaviorSubject();
+
+  Stream<List<NotificationItemModel>> get notificationListStream =>
+      _notificationListStreamController.stream;
+
+  StreamSink<List<NotificationItemModel>> get notificationListSink =>
+      _notificationListStreamController.sink;
+
+  NotificationBloc();
+
+  bool isClosed() {
+    return _notificationListStreamController.isClosed;
+  }
+
+  void dispose() {
+    _notificationListStreamController.close();
+  }
+}

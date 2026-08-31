@@ -1,0 +1,425 @@
+// class FnObjectModel {
+class ObjectDataModel {
+  dynamic v;
+  dynamic f;
+  dynamic s;
+  dynamic evt;
+  dynamic evtac;
+  dynamic evtohc;
+  dynamic a;
+  List<dynamic>? l;
+  List<List<dynamic>>? d;
+  dynamic lif;
+  dynamic st;
+  dynamic ststr;
+  dynamic p;
+  dynamic cn;
+  dynamic o;
+  dynamic eh;
+  List<dynamic>? sr;
+
+  ObjectDataModel({
+    this.v,
+    this.f,
+    this.s,
+    this.evt,
+    this.evtac,
+    this.evtohc,
+    this.a,
+    this.l,
+    this.d,
+    this.lif,
+    this.st,
+    this.ststr,
+    this.p,
+    this.cn,
+    this.o,
+    this.eh,
+    this.sr,
+  });
+
+  factory ObjectDataModel.fromJson(Map<String, dynamic> json) => ObjectDataModel(
+        v: json["v"],
+        f: json["f"],
+        s: json["s"],
+        evt: json["evt"],
+        evtac: json["evtac"],
+        evtohc: json["evtohc"],
+        a: json["a"],
+        l: List<dynamic>.from(json["l"].map((x) => x)),
+        d: List<List<dynamic>>.from(json["d"].map((x) => List<dynamic>.from(x.map((x) => x)))),
+        lif: json['lif'],
+        st: json["st"],
+        ststr: json["ststr"],
+        p: json["p"],
+        cn: json["cn"],
+        o: json["o"],
+        eh: json["eh"],
+        sr: List<dynamic>.from(json["sr"].map((x) => x)),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "v": v,
+        "f": f,
+        "s": s,
+        "evt": evt,
+        "evtac": evtac,
+        "evtohc": evtohc,
+        "a": a,
+        "l": List<dynamic>.from(l!.map((x) => x)),
+        "d": List<dynamic>.from(d!.map((x) => List<dynamic>.from(x.map((x) => x)))),
+        "lif": lif,
+        "st": st,
+        "ststr": ststr,
+        "p": p,
+        "cn": cn,
+        "o": o,
+        "eh": eh,
+        "sr": List<dynamic>.from(sr!.map((x) => x)),
+      };
+}
+/*
+
+class ObjectDataModel {
+  final bool v;
+  final bool f;
+  final bool s;
+  final bool evt;
+  final bool evtac;
+  final bool evtohc;
+  final String a;
+  final List<dynamic> l;
+  final List<dynamic> d;
+  final String lif;
+  final String st;
+  final String ststr;
+  final String p;
+  final int cn;
+  final int o;
+  final String eh;
+  final List<dynamic> sr;
+
+  ObjectDataModel({
+    this.v,
+    this.f,
+    this.s,
+    this.evt,
+    this.evtac,
+    this.evtohc,
+    this.a,
+    this.l,
+    this.d,
+    this.lif,
+    this.st,
+    this.ststr,
+    this.p,
+    this.cn,
+    this.o,
+    this.eh,
+    this.sr,
+  });
+
+  factory ObjectDataModel.fromJson(Map<String, dynamic> json) {
+    return ObjectDataModel(
+      v: json['v'] ?? false,
+      f: json['f'] ?? false,
+      s: json['s'] ?? false,
+      evt: json['evt'] ?? false,
+      evtac: json['evtac'] ?? false,
+      evtohc: json['evtohc'] ?? false,
+      a: json['a'] ?? '',
+      l: json['l'] ?? [],
+      d: (json['d'] as List).map((item) => D.fromJson(item)).toList(),
+      lif: json['lif'] ?? '',
+      st: json['st'] == false ? 'off' : 'on',
+      ststr: json['ststr'] ?? '',
+      p: json['p'] ?? '',
+      cn: json['cn'] ?? 0,
+      o: json['o'] ?? 0,
+      eh: json['eh'] ?? '',
+      sr: json['sr'] ?? [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'v': v,
+      'f': f,
+      's': s,
+      'evt': evt,
+      'evtac': evtac,
+      'evtohc': evtohc,
+      'a': a,
+      'l': l,
+      'd': d.map((item) => item.toJson()).toList(), // assuming D has a toJson method
+      'lif': lif,
+      'st': st,
+      'ststr': ststr,
+      'p': p,
+      'cn': cn,
+      'o': o,
+      'eh': eh,
+      'sr': sr,
+    };
+  }
+}*/
+/*
+
+
+class ObjectDataModel {
+  final bool v;
+  final bool f;
+  final bool s;
+  final bool evt;
+  final bool evtac;
+  final bool evtohc;
+  final String a;
+  final List<dynamic> l;
+  final List<D> dData;
+  final String lif;
+  final String st;
+  final String ststr;
+  final String p;
+  final int cn;
+  final int o;
+  final String eh;
+  final List<dynamic> sr;
+
+  ObjectDataModel({
+    this.v,
+    this.f,
+    this.s,
+    this.evt,
+    this.evtac,
+    this.evtohc,
+    this.a,
+    this.l,
+    this.dData,
+    this.lif,
+    this.st,
+    this.ststr,
+    this.p,
+    this.cn,
+    this.o,
+    this.eh,
+    this.sr,
+  });
+
+
+
+
+  factory ObjectDataModel.fromJson(Map<String, dynamic> json) {
+    List<D> dData = (json['d'] as List)?.map((item) => D.fromJson(item as List<dynamic>))?.toList() ?? [];
+    return ObjectDataModel(
+      v: json['v'],
+      f: json['f'],
+      s: json['s'],
+      evt: json['evt'],
+      evtac: json['evtac'],
+      evtohc: json['evtohc'],
+      a: json['a'],
+      l: json['l'],
+      dData: dData,
+      lif: json['lif'],
+      st: json['st'] == false ? "off" : "on",
+      ststr: json['ststr'],
+      p: json['p'],
+      cn: json['cn'],
+      o: json['o'],
+      eh: json['eh'],
+      sr: json['sr'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'v': v,
+      'f': f,
+      's': s,
+      'evt': evt,
+      'evtac': evtac,
+      'evtohc': evtohc,
+      'a': a,
+      'l': l,
+      'd': dData.map((item) => item.toJson()).toList(),
+      'lif': lif,
+      'st': st,
+      'ststr': ststr,
+      'p': p,
+      'cn': cn,
+      'o': o,
+      'eh': eh,
+      'sr': sr,
+    };
+  }
+}
+
+class D {
+  final String date;
+  final String time;
+  final String latitude;
+  final String longitude;
+  final String zero1;
+  final String zero2;
+  final int zero3;
+  final InnerData innerData;
+
+  D({
+    this.date,
+    this.time,
+    this.latitude,
+    this.longitude,
+    this.zero1,
+    this.zero2,
+    this.zero3,
+    this.innerData,
+  });
+
+  factory D.fromJson(List<dynamic> json) {
+    return D(
+      date: json[0] ?? '',
+      time: json[1] ?? '',
+      latitude: json[2] ?? '',
+      longitude: json[3] ?? '',
+      zero1: json[4] ?? '',
+      zero2: json[5] ?? '',
+      zero3: json[6] ?? 0,
+      innerData: json[7] != null ? InnerData.fromJson(Map<String, dynamic>.from(json[7])) : null);
+  }
+
+  List<dynamic> toJson() {
+    return [
+      date,
+      time,
+      latitude,
+      longitude,
+      zero1,
+      zero2,
+      zero3,
+      innerData?.toJson(), // assuming InnerData has a toJson method
+    ];
+  }
+
+}
+class InnerData {
+  final String acc;
+  final String charge;
+  final String distance;
+  final String fuel;
+  final String hours;
+  final String ignition;
+  final String in2;
+  final String motion;
+  final String odometer;
+  final String out2;
+  final String panic;
+  final String totalDistance;
+  final String batteryLevel;
+  final String blocked;
+  final String event;
+  final String hdop;
+  final String io200;
+  final String io68;
+  final String io69;
+  final String operator;
+  final String pdop;
+  final String power;
+  final String priority;
+  final String rssi;
+  final String sat;
+  final String status;
+
+  InnerData({
+    this.acc,
+    this.charge,
+    this.distance,
+    this.fuel,
+    this.hours,
+    this.ignition,
+    this.in2,
+    this.motion,
+    this.odometer,
+    this.out2,
+    this.panic,
+    this.totalDistance,
+    this.batteryLevel,
+    this.blocked,
+    this.event,
+    this.hdop,
+    this.io200,
+    this.io68,
+    this.io69,
+    this.operator,
+    this.pdop,
+    this.power,
+    this.priority,
+    this.rssi,
+    this.sat,
+    this.status,
+  });
+
+  factory InnerData.fromJson(Map<String, dynamic> json) {
+    return InnerData(
+      acc: json['acc'],
+      charge: json['charge'],
+      distance: json['distance'],
+      fuel: json['fuel'],
+      hours: json['hours'],
+      ignition: json['ignition'],
+      in2: json['in2'],
+      motion: json['motion'],
+      odometer: json['odometer'],
+      out2: json['out2'],
+      panic: json['panic'],
+      totalDistance: json['totalDistance'],
+      batteryLevel: json['batteryLevel'],
+      blocked: json['blocked'],
+      event: json['event'],
+      hdop: json['hdop'],
+      io200: json['io200'],
+      io68: json['io68'],
+      io69: json['io69'],
+      operator: json['operator'],
+      pdop: json['pdop'],
+      power: json['power'],
+      priority: json['priority'],
+      rssi: json['rssi'],
+      sat: json['sat'],
+      status: json['status'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'acc': acc,
+      'charge': charge,
+      'distance': distance,
+      'fuel': fuel,
+      'hours': hours,
+      'ignition': ignition,
+      'in2': in2,
+      'motion': motion,
+      'odometer': odometer,
+      'out2': out2,
+      'panic': panic,
+      'totalDistance': totalDistance,
+      'batteryLevel': batteryLevel,
+      'blocked': blocked,
+      'event': event,
+      'hdop': hdop,
+      'io200': io200,
+      'io68': io68,
+      'io69': io69,
+      'operator': operator,
+      'pdop': pdop,
+      'power': power,
+      'priority': priority,
+      'rssi': rssi,
+      'sat': sat,
+      'status': status,
+    };
+  }
+}
+
+
+*/

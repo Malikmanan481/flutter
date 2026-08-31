@@ -1,0 +1,5 @@
+library map;
+
+export 'src/map.dart';
+export 'src/provider.dart';
+export '../lib_latlng/latlng.dart';

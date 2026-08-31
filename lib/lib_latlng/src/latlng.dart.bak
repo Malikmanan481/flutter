@@ -1,0 +1,7 @@
+/// Coordinates in Degrees.
+class CustomLatLng {
+  double latitude;
+  double longitude;
+
+  CustomLatLng(this.latitude, this.longitude);
+}

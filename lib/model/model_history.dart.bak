@@ -1,0 +1,153 @@
+import 'dart:convert';
+
+String historyModelToJson(HistoryModel data) => json.encode(data.toJson());
+
+class HistoryModel {
+  HistoryModel({
+    this.route,
+    this.stops,
+    this.drives,
+    this.events,
+    this.routeLength,
+    this.topSpeed,
+    this.fuelConsumption,
+    this.fuelCost,
+    this.stopsDurationTime,
+    this.stopsDuration,
+    this.drivesDurationTime,
+    this.drivesDuration,
+    this.avgSpeed,
+    this.engineWorkTime,
+    this.engineIdleTime,
+    this.engineWork,
+    this.engineIdle,
+    this.fuelConsumptionPer100Km,
+    this.fuelConsumptionMpg,
+  });
+
+  List<List<dynamic>>? route;
+  List<dynamic>? stops;
+  List<List<dynamic>>? drives;
+  List<dynamic>? events;
+  dynamic routeLength;
+  dynamic topSpeed;
+  dynamic fuelConsumption;
+  dynamic fuelCost;
+  dynamic stopsDurationTime;
+  dynamic stopsDuration;
+  dynamic drivesDurationTime;
+  String? drivesDuration;
+  dynamic avgSpeed;
+  dynamic engineWorkTime;
+  dynamic engineIdleTime;
+  String? engineWork;
+  String? engineIdle;
+  dynamic fuelConsumptionPer100Km;
+  dynamic fuelConsumptionMpg;
+
+  factory HistoryModel.fromJson(Map<String, dynamic> json) => HistoryModel(
+        route:
+            List<List<dynamic>>.from(json["route"].map((x) => List<dynamic>.from(x.map((x) => x)))),
+        stops: List<dynamic>.from(json["stops"].map((x) => x)),
+        drives: List<List<dynamic>>.from(
+            json["drives"].map((x) => List<dynamic>.from(x.map((x) => x)))),
+        events: List<dynamic>.from(json["events"].map((x) => x)),
+        routeLength: json["route_length"],
+        topSpeed: json["top_speed"],
+        fuelConsumption: json["fuel_consumption"],
+        fuelCost: json["fuel_cost"],
+        stopsDurationTime: json["stops_duration_time"],
+        stopsDuration: json["stops_duration"],
+        drivesDurationTime: json["drives_duration_time"],
+        drivesDuration: json["drives_duration"],
+        avgSpeed: json["avg_speed"],
+        engineWorkTime: json["engine_work_time"],
+        engineIdleTime: json["engine_idle_time"],
+        engineWork: json["engine_work"],
+        engineIdle: json["engine_idle"],
+        fuelConsumptionPer100Km: json["fuel_consumption_per_100km"],
+        fuelConsumptionMpg: json["fuel_consumption_mpg"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "route": List<dynamic>.from(route!.map((x) => List<dynamic>.from(x.map((x) => x)))),
+        "stops": List<dynamic>.from(stops!.map((x) => x)),
+        "drives": List<dynamic>.from(drives!.map((x) => List<dynamic>.from(x.map((x) => x)))),
+        "events": List<dynamic>.from(events!.map((x) => x)),
+        "route_length": routeLength,
+        "top_speed": topSpeed,
+        "fuel_consumption": fuelConsumption,
+        "fuel_cost": fuelCost,
+        "stops_duration_time": stopsDurationTime,
+        "stops_duration": stopsDuration,
+        "drives_duration_time": drivesDurationTime,
+        "drives_duration": drivesDuration,
+        "avg_speed": avgSpeed,
+        "engine_work_time": engineWorkTime,
+        "engine_idle_time": engineIdleTime,
+        "engine_work": engineWork,
+        "engine_idle": engineIdle,
+        "fuel_consumption_per_100km": fuelConsumptionPer100Km,
+        "fuel_consumption_mpg": fuelConsumptionMpg,
+      };
+}
+
+class RouteClass {
+  RouteClass({
+    this.gpslev,
+    this.mcc,
+    this.mnc,
+    this.lac,
+    this.cellid,
+    this.acc,
+    this.pump,
+    this.track,
+    this.bats,
+    this.defense,
+    this.batl,
+    this.gsmlev,
+  });
+
+  String? gpslev;
+  String? mcc;
+  String? mnc;
+  String? lac;
+  String? cellid;
+  String? acc;
+  String? pump;
+  String? track;
+  String? bats;
+  String? defense;
+  String? batl;
+  String? gsmlev;
+
+  factory RouteClass.fromJson(Map<String, dynamic> json) => RouteClass(
+        gpslev: json["gpslev"],
+        mcc: json["mcc"],
+        mnc: json["mnc"],
+        lac: json["lac"],
+        cellid: json["cellid"],
+        acc: json["acc"],
+        pump: json["pump"],
+        track: json["track"],
+        bats: json["bats"],
+        defense: json["defense"],
+        batl: json["batl"],
+        gsmlev: json["gsmlev"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "gpslev": gpslev,
+        "mcc": mcc,
+        "mnc": mnc,
+        "lac": lac,
+        "cellid": cellid,
+        "acc": acc,
+        "pump": pump,
+        "track": track,
+        "bats": bats,
+        "defense": defense,
+        "batl": batl,
+        "gsmlev": gsmlev,
+      };
+}

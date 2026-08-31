@@ -1,0 +1,131 @@
+import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/services/network_helper.dart';
+import 'package:speedotrack/sharedPrefs/login_settings.dart';
+
+class PushNotificationsManager {
+  PushNotificationsManager._();
+
+  factory PushNotificationsManager() => _instance;
+
+  static final PushNotificationsManager _instance =
+      PushNotificationsManager._();
+
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  bool _initialized = false;
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  int id = 0;
+
+  Future<void> init() async {
+    if (!_initialized) {
+      // For testing purposes print the Firebase Messaging token
+      String? token = await _firebaseMessaging.getToken();
+      print("FirebaseMessaging token: $token");
+      if (token != null) {
+        Globals.prefs!.setString(LoginSettings.notificationToken, token);
+      }
+      _initialized = true;
+    }
+    if (Globals.prefs!.getString(LoginSettings.email) != null) {
+      FirebaseMessaging.instance.subscribeToTopic(Globals.prefs!
+          .getString(LoginSettings.email)!
+          .replaceAll('@', '_at_'));
+    }
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      // Direct Traccar Push Notification handling
+      handleTraccarRemoteMessage(message);
+    });
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+  }
+
+  Future<void> _showNotification(String title, String body) async {
+    const AndroidNotificationDetails androidNotificationDetails =
+        AndroidNotificationDetails("gps", 'gps',
+            channelDescription: 'gps_channel',
+            importance: Importance.max,
+            priority: Priority.high,
+            icon: "ic_launcher",
+            ticker: 'ticker');
+    const NotificationDetails notificationDetails =
+        NotificationDetails(android: androidNotificationDetails);
+    await flutterLocalNotificationsPlugin
+        .show(id++, title, body, notificationDetails, payload: 'item x');
+  }
+
+  Future<bool> syncTokenWithTraccarUser({
+    required int userId,
+    required Map<String, dynamic> currentUserData,
+    NetworkHelper? networkHelper,
+  }) async {
+    try {
+      final String? token = Globals.prefs?.getString(LoginSettings.notificationToken) ??
+          await _firebaseMessaging.getToken();
+
+      if (token == null || token.isEmpty) return false;
+
+      final helper = networkHelper ?? NetworkHelper();
+
+      // Current user attributes copy karke FCM token add/update kar rahe hain
+      Map<String, dynamic> attributes =
+          Map<String, dynamic>.from(currentUserData['attributes'] ?? {});
+      attributes['notificationTokens'] = token;
+      attributes['fcmToken'] = token;
+
+      currentUserData['attributes'] = attributes;
+
+      final response = await helper.traccarPut(
+        'api/users/$userId',
+        body: jsonEncode(currentUserData),
+      );
+
+      if (response != null) {
+        debugPrint('PushNotificationsManager: Token successfully synced with Traccar user #$userId');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('PushNotificationsManager: Error syncing FCM token with Traccar - $e');
+    }
+    return false;
+  }
+
+  /// Incoming Firebase Remote Message parse karke notification display karna
+  void handleTraccarRemoteMessage(RemoteMessage message) {
+    try {
+      String title = message.notification?.title ?? message.data['title'] ?? 'SpeedoTrack Alert';
+      String body = message.notification?.body ?? message.data['body'] ?? message.data['message'] ?? '';
+
+      if (body.isNotEmpty) {
+        _showNotification(title, body);
+      }
+    } catch (e) {
+      debugPrint('PushNotificationsManager: RemoteMessage parse error - $e');
+    }
+  }
+
+  /// Traccar Notificator test call trigger karna (`/api/notifications/test/{notificator}`)
+  Future<bool> testTraccarNotification(
+    String notificator, {
+    NetworkHelper? networkHelper,
+  }) async {
+    try {
+      final helper = networkHelper ?? NetworkHelper();
+      final res = await helper.traccarPost(
+        'api/notifications/test/$notificator',
+        body: '{}',
+      );
+      return res != null;
+    } catch (e) {
+      debugPrint('PushNotificationsManager: Error testing Traccar notification - $e');
+      return false;
+    }
+  }
+}

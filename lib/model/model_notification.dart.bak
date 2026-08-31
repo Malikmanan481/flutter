@@ -1,0 +1,47 @@
+class NotificationModel {
+  String? page;
+  int? total;
+  int? records;
+  List<Row>? rows;
+
+  NotificationModel({
+    this.page,
+    this.total,
+    this.records,
+    this.rows,
+  });
+
+  factory NotificationModel.fromJson(Map<String, dynamic> json) => NotificationModel(
+        page: json["page"],
+        total: json["total"],
+        records: json["records"],
+        rows: List<Row>.from(json["rows"].map((x) => Row.fromJson(x))),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "page": page,
+        "total": total,
+        "records": records,
+        "rows": List<dynamic>.from(rows!.map((x) => x.toJson())),
+      };
+}
+
+class Row {
+  String? id;
+  List<dynamic>? cell;
+
+  Row({
+    this.id,
+    this.cell,
+  });
+
+  factory Row.fromJson(Map<String, dynamic> json) => Row(
+        id: json["id"],
+        cell: List<dynamic>.from(json["cell"].map((x) => x)),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "cell": List<dynamic>.from(cell!.map((x) => x)),
+      };
+}

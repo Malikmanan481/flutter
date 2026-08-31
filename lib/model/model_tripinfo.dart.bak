@@ -1,0 +1,52 @@
+class TripInfoModel {
+  final String start;
+  final String end;
+  final String duration;
+  final String distance;
+  final String topSpeed;
+  final String avgSpeed;
+  final String fuelConsumption;
+  final String fuelCost;
+  final String startLocation;
+  final String endLocation;
+
+  TripInfoModel(
+      this.start,
+      this.end,
+      this.duration,
+      this.distance,
+      this.topSpeed,
+      this.avgSpeed,
+      this.fuelConsumption,
+      this.fuelCost,
+      this.startLocation,
+      this.endLocation);
+}
+
+class tripdetail {
+  dynamic start;
+  dynamic end;
+  dynamic routeLength;
+  dynamic topSpeed;
+  dynamic avgSpeed;
+  dynamic fuelConsumption;
+  dynamic fuelCost;
+  dynamic drivesDuration;
+  dynamic engineWork;
+  dynamic fuelConsumptionPer100km;
+  dynamic fuelConsumptionMpg;
+
+  tripdetail({
+    this.start,
+    this.end,
+    this.routeLength,
+    this.topSpeed,
+    this.avgSpeed,
+    this.fuelConsumption,
+    this.fuelCost,
+    this.drivesDuration,
+    this.engineWork,
+    this.fuelConsumptionPer100km,
+    this.fuelConsumptionMpg,
+  });
+}

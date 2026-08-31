@@ -1,0 +1,51 @@
+import 'dart:convert';
+
+String imagesModelToJson(ImagesModel data) => json.encode(data.toJson());
+
+class ImagesModel {
+  ImagesModel({
+    this.page,
+    this.total,
+    this.records,
+    this.rows,
+  });
+
+  String? page;
+  int? total;
+  int? records;
+  List<Row>? rows;
+
+  factory ImagesModel.fromJson(Map<String, dynamic> json) => ImagesModel(
+        page: json["page"],
+        total: json["total"],
+        records: json["records"],
+        rows: List<Row>.from(json["rows"].map((x) => Row.fromJson(x))),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "page": page,
+        "total": total,
+        "records": records,
+        "rows": List<dynamic>.from(rows!.map((x) => x.toJson())),
+      };
+}
+
+class Row {
+  Row({
+    this.id,
+    this.cell,
+  });
+
+  String? id;
+  List<String>? cell;
+
+  factory Row.fromJson(Map<String, dynamic> json) => Row(
+        id: json["id"],
+        cell: List<String>.from(json["cell"].map((x) => x)),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "cell": List<dynamic>.from(cell!.map((x) => x)),
+      };
+}

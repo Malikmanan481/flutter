@@ -1,0 +1,19 @@
+import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+abstract class WindowEvent extends Equatable {
+  const WindowEvent();
+
+  @override
+  List<Object> get props => [];
+}
+class ChangePositionEvent extends WindowEvent {
+  final BuildContext? context;
+  final ScreenCoordinate? screenCoordinate;
+  ChangePositionEvent(
+      {this.context,this.screenCoordinate});
+}
+class WindowLoadedEvent extends WindowEvent{
+  final double? height, width;
+  WindowLoadedEvent({this.height, this.width});
+}

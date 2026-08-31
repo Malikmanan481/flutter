@@ -1,0 +1,120 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:get/get.dart';
+import 'package:get/get_common/get_reset.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+
+import '../globals.dart';
+
+class ReportViewActivity extends StatefulWidget {
+  final String? htmlDocument;
+
+  const ReportViewActivity({Key? key, this.htmlDocument}) : super(key: key);
+
+  @override
+  _ReportViewActivityState createState() =>
+      _ReportViewActivityState(htmlDocument!);
+}
+
+class _ReportViewActivityState extends State<ReportViewActivity> {
+  final String? htmlDocument;
+  // final _controller = WebViewController();
+  bool isLoading = true;
+  InAppWebViewController? webViewController;
+  final GlobalKey webViewKey = GlobalKey();
+
+  @override
+  void initState() {
+    // _controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+    // _controller.enableZoom(true);
+    // _controller.loadHtmlString(htmlDocument!);
+    super.initState();
+  }
+
+  _ReportViewActivityState(this.htmlDocument);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        backgroundColor: Color(0xFFF6F6F6),
+        appBar: AppBar(
+          backgroundColor: Globals.appColor,
+          elevation: 0.0,
+          title: Text(
+            'reports'.tr,
+            style: TextStyle(
+                color: Color(0xFFF6F6F6), fontFamily: 'Baloo_Thambi_2'),
+          ),
+          iconTheme: IconThemeData(
+            color: Color(0xFFF6F6F6), //change your color here
+          ),
+        ),
+        body: Container(
+            color: Colors.white,
+            child: Stack(
+              children: <Widget>[
+                InAppWebView(
+                  key: webViewKey,
+                  //initialUrlRequest: URLRequest(url: WebUri("google.com")),
+                  initialSettings: InAppWebViewSettings(
+                      transparentBackground: true,
+                      safeBrowsingEnabled: true,
+                      supportZoom: true,
+                      isFraudulentWebsiteWarningEnabled: true),
+                  onWebViewCreated: (controller) async {
+                    webViewController = controller;
+                    webViewController!.loadData(data: htmlDocument!);
+                  },
+                  onLoadStart: (controller, url) {},
+                  onLoadStop: (controller, url) async {},
+                  onUpdateVisitedHistory: (controller, url, isReload) {},
+                  onTitleChanged: (controller, title) {},
+                  onProgressChanged: (controller, progress) {},
+                  shouldOverrideUrlLoading:
+                      (controller, navigationAction) async {
+                    final url = navigationAction.request.url;
+                    if (navigationAction.isForMainFrame &&
+                        url != null &&
+                        ![
+                          'http',
+                          'https',
+                          'file',
+                          'chrome',
+                          'data',
+                          'javascript',
+                          'about'
+                        ].contains(url.scheme)) {
+                      if (await canLaunchUrl(url)) {
+                        launchUrl(url);
+                        return NavigationActionPolicy.CANCEL;
+                      }
+                    }
+                    return NavigationActionPolicy.ALLOW;
+                  },
+                ),
+                // htmlDocument!.isNotEmpty
+                //     ? WebViewWidget(
+                //         controller: _controller,
+                //       )
+                //     : Center(
+                //         child: CircularProgressIndicator(
+                //             backgroundColor: Color(0xFFF6F6F6),
+                //             valueColor: new AlwaysStoppedAnimation<Color>(
+                //               Globals.appColor,
+                //             )),
+                //       ),
+                // Visibility(
+                //   visible: isLoading,
+                //   child: Center(
+                //     child: CircularProgressIndicator(
+                //         backgroundColor: Color(0xFFF6F6F6),
+                //         valueColor: new AlwaysStoppedAnimation<Color>(
+                //           Globals.appColor,
+                //         )),
+                //   ),
+                // ),
+              ],
+            )));
+  }
+}

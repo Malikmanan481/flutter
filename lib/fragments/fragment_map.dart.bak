@@ -1,0 +1,275 @@
+import 'dart:async';
+import 'dart:math';
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart';
+import 'package:location/location.dart' as Location;
+import 'package:speedotrack/component/component_bottom_sheet.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/helper/helper.dart';
+
+enum vehicleType { All, Active, Inactive, Idle, Offline }
+
+class MapFragment extends StatefulWidget {
+  @override
+  _MapFragmentState createState() => _MapFragmentState();
+}
+
+class _MapFragmentState extends State<MapFragment>
+    with AutomaticKeepAliveClientMixin<MapFragment> {
+  GoogleMapController? _controller;
+  bool trafficStatus = false,
+      mapTypeEnabled = Globals.prefs!.getBool('mapHybrid')!,
+      clearMakers = false;
+  bool myLocation = false;
+  List<Marker> markers = [];
+  List<Marker> finalMarkers = [];
+  StreamSubscription? _streamSubscription;
+  int previousSortedArray = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _streamSubscription =
+        Globals.homeBloc!.homeListStream.listen((homeItemList) async {
+      if (!myLocation) {
+        markers.clear();
+        for (int index = 0; index < homeItemList.length; index++) {
+          /*if (homeItemList[index].expired) {
+            continue;
+          }
+          if (homeItemList[index].status == 'false') {
+            continue;
+          }*/
+          try {
+            BitmapDescriptor bitmapDescriptor = await Helper().getMarker(
+                context,
+                homeItemList[index].status,
+                homeItemList[index].name,
+                homeItemList[index].angle,
+                homeItemList[index].speed,
+                homeItemList[index].imageName);
+            final MarkerId markerId = MarkerId(homeItemList[index].name);
+            final Marker marker = Marker(
+                position: LatLng(double.parse(homeItemList[index].lat),
+                    double.parse(homeItemList[index].lng)),
+                icon: bitmapDescriptor,
+                markerId: markerId,
+                anchor:
+                    Offset(0.5, 0.5), // Center the anchor to prevent shifting
+                onTap: () {
+                  BottomSheetComponent().modalBottomSheetMenu(
+                      context: context,
+                      lat: homeItemList[index].lat,
+                      lng: homeItemList[index].lng,
+                      speed: homeItemList[index].speed,
+                      angle: homeItemList[index].angle,
+                      deviceName: homeItemList[index].name,
+                      iMEI: homeItemList[index].imei,
+                      status: homeItemList[index].status,
+                      statusMessage: homeItemList[index].statusMessage);
+                });
+            markers.add(marker);
+          } catch (e) {}
+        }
+        try {
+          if (mounted) {
+            setState(() {
+              finalMarkers.clear();
+              finalMarkers.addAll(markers);
+            });
+            if (isFirstTime) {
+              _controller!.animateCamera(
+                  CameraUpdate.newLatLngBounds(getBounds(finalMarkers), 40));
+              isFirstTime = false;
+            }
+          }
+        } catch (e) {}
+      }
+    });
+  }
+
+  bool isFirstTime = true;
+
+  LatLngBounds getBounds(List<Marker> markers) {
+    var lngs = markers.map<double>((m) => m.position.longitude).toList();
+    var lats = markers.map<double>((m) => m.position.latitude).toList();
+
+    double topMost = lngs.reduce(max);
+    double leftMost = lats.reduce(min);
+    double rightMost = lats.reduce(max);
+    double bottomMost = lngs.reduce(min);
+
+    LatLngBounds bounds = LatLngBounds(
+      northeast: LatLng(rightMost, topMost),
+      southwest: LatLng(leftMost, bottomMost),
+    );
+    return bounds;
+  }
+
+  @override
+  void dispose() {
+    _streamSubscription!.cancel();
+    super.dispose();
+  }
+
+  void getToMyLocation() async {
+    var location = Location.Location();
+    try {
+      LocationData currentLocation = await location.getLocation();
+      _controller!.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
+          zoom: 17,
+          target:
+              LatLng(currentLocation.latitude!, currentLocation.longitude!))));
+    } on Exception {}
+  }
+
+  Future<bool> _mapFuture =
+      Future.delayed(Duration(milliseconds: 400), () => true);
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Scaffold(
+      backgroundColor: Color(0xFFF6F6F6),
+      body: Stack(
+        children: <Widget>[
+          FutureBuilder<bool>(
+              future: _mapFuture,
+              builder: (context, value) {
+                if (!value.hasData) {
+                  return Center(
+                    child: Text(
+                      'Please Wait...',
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Globals.appColor,
+                          fontSize: 14,
+                          decoration: TextDecoration.none,
+                          letterSpacing: 1,
+                          fontFamily: 'Montserrat'),
+                    ),
+                  );
+                }
+                return GoogleMap(
+                  padding: EdgeInsets.only(bottom: 70, left: 10),
+                  initialCameraPosition: CameraPosition(
+                    target: LatLng(20.5937, 78.9629),
+                  ),
+                  gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                    Factory<OneSequenceGestureRecognizer>(
+                      () => EagerGestureRecognizer(),
+                    ),
+                  },
+                  markers: Set<Marker>.of(finalMarkers),
+                  // YOUR MARKS IN MAP
+                  mapType: mapTypeEnabled ? MapType.hybrid : MapType.normal,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                  trafficEnabled: trafficStatus,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  minMaxZoomPreference: MinMaxZoomPreference(0, 19),
+                  onMapCreated: (GoogleMapController controller) async {
+                    _controller = controller;
+                  },
+                );
+              }),
+          Align(
+            alignment: Alignment.topRight,
+            child: Column(
+              children: <Widget>[
+                Container(
+                  width: 40.0,
+                  height: 40.0,
+                  margin: EdgeInsets.only(right: 10, top: 10),
+                  child: RawMaterialButton(
+                    shape: CircleBorder(),
+                    elevation: 15.0,
+                    fillColor:
+                        mapTypeEnabled ? Globals.appColor : Color(0xFFF6F6F6),
+                    child: Image.asset(
+                      'images/mapType.png',
+                      height: 15,
+                      width: 15,
+                      color:
+                          mapTypeEnabled ? Color(0xFFF6F6F6) : Globals.appColor,
+                    ),
+                    onPressed: () {
+                      mapTypeEnabled
+                          ? Globals.prefs!.setBool('mapHybrid', false)
+                          : Globals.prefs!.setBool('mapHybrid', true);
+                      setState(() {
+                        mapTypeEnabled = Globals.prefs!.getBool('mapHybrid')!;
+                      });
+                    },
+                  ),
+                ),
+                Container(
+                  width: 40.0,
+                  height: 40.0,
+                  margin: EdgeInsets.only(right: 10, top: 10),
+                  child: RawMaterialButton(
+                    shape: CircleBorder(),
+                    elevation: 15.0,
+                    fillColor:
+                        trafficStatus ? Globals.appColor : Color(0xFFF6F6F6),
+                    child: Icon(
+                      Icons.traffic,
+                      size: 15,
+                      color:
+                          trafficStatus ? Color(0xFFF6F6F6) : Globals.appColor,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        trafficStatus = !trafficStatus;
+                      });
+                    },
+                  ),
+                ),
+                Container(
+                  width: 40.0,
+                  height: 40.0,
+                  margin: EdgeInsets.only(right: 10, top: 10),
+                  child: RawMaterialButton(
+                    shape: CircleBorder(),
+                    elevation: 15.0,
+                    fillColor:
+                        myLocation ? Globals.appColor : Color(0xFFF6F6F6),
+                    child: Image.asset(
+                      'images/gpsIcon.png',
+                      height: 15,
+                      width: 15,
+                      color: myLocation ? Color(0xFFF6F6F6) : Globals.appColor,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        myLocation = !myLocation;
+                        if (!myLocation) {
+                          _controller!.animateCamera(
+                              CameraUpdate.newLatLngBounds(
+                                  getBounds(finalMarkers), 40));
+                        } else {
+                          getToMyLocation();
+                        }
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+}

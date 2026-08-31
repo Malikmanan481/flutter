@@ -1,0 +1,210 @@
+import 'dart:ui';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:get/get.dart';
+import 'package:speedotrack/bloc/bloc_home_item.dart';
+import 'package:speedotrack/component/component_home_card.dart';
+import 'package:speedotrack/component/component_home_card_list.dart';
+import 'package:speedotrack/globals.dart';
+
+class HomeFragment extends StatefulWidget {
+  @override
+  _HomeFragmentState createState() => _HomeFragmentState();
+}
+
+class _HomeFragmentState extends State<HomeFragment>
+    with AutomaticKeepAliveClientMixin<HomeFragment> {
+  bool mapType = Globals.prefs!.getBool('mapHybrid')!;
+
+  bool mapCardSwitch = Globals.prefs!.getBool('mapCard') != null
+      ? Globals.prefs!.getBool('mapCard')!
+      : false;
+
+  String _selectedFilter = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    print("home dispose");
+    super.dispose();
+  }
+
+  List<HomeItem> _filterDevices(List<HomeItem> devices) {
+    switch (_selectedFilter) {
+      case 'Moving':
+        return devices.where((d) => d.status == 'm').toList();
+      case 'Stopped':
+        return devices.where((d) => d.status == 's').toList();
+      case 'Idle':
+        return devices.where((d) => d.status == 'i').toList();
+      case 'Offline':
+        return devices.where((d) => d.status == 'off' || d.status == 'false').toList();
+      default:
+        return devices;
+    }
+  }
+
+  int _getCount(List<HomeItem> devices, String filter) {
+    switch (filter) {
+      case 'Moving':
+        return devices.where((d) => d.status == 'm').length;
+      case 'Stopped':
+        return devices.where((d) => d.status == 's').length;
+      case 'Idle':
+        return devices.where((d) => d.status == 'i').length;
+      case 'Offline':
+        return devices.where((d) => d.status == 'off' || d.status == 'false').length;
+      default:
+        return devices.length;
+    }
+  }
+
+  Widget _buildFilterChip(String label, List<HomeItem> allDevices) {
+    bool isSelected = _selectedFilter == label;
+    int count = _getCount(allDevices, label);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = label;
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Globals.appColor : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Globals.appColor,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          '$label ($count)',
+          style: TextStyle(
+            color: isSelected ? Colors.white : Globals.appColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return StreamBuilder<List<HomeItem>>(
+        stream: Globals.homeBloc!.homeListStream,
+        builder: (context, snapshot) {
+          if (snapshot.data == null ||
+              snapshot.hasError ||
+              snapshot.data!.isEmpty) {
+            return Center(
+                child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Fetching data for first time...',
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: Globals.appColor,
+                      fontSize: 14,
+                      decoration: TextDecoration.none,
+                      letterSpacing: 1,
+                      fontFamily: 'Montserrat'),
+                ),
+                Padding(
+                  padding:
+                      const EdgeInsets.only(top: 10, left: 40, right: 40),
+                  child: CircularProgressIndicator(
+                    backgroundColor: Colors.transparent,
+                    strokeWidth: 3,
+                    valueColor:
+                        new AlwaysStoppedAnimation<Color>(Globals.appColor),
+                  ),
+                ),
+              ],
+            ));
+          } else {
+            List<HomeItem> allDevices = snapshot.data!;
+            List<HomeItem> filteredDevices = _filterDevices(allDevices);
+
+            return Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.shade200,
+                        blurRadius: 2,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip('All', allDevices),
+                        SizedBox(width: 8),
+                        _buildFilterChip('Moving', allDevices),
+                        SizedBox(width: 8),
+                        _buildFilterChip('Stopped', allDevices),
+                        SizedBox(width: 8),
+                        _buildFilterChip('Idle', allDevices),
+                        SizedBox(width: 8),
+                        _buildFilterChip('Offline', allDevices),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: filteredDevices.isEmpty
+                      ? Center(
+                          child: Text(
+                            'noDeviceFound'.tr,
+                            maxLines: 2,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Globals.appColor,
+                                fontSize: 14,
+                                decoration: TextDecoration.none,
+                                letterSpacing: 1,
+                                fontFamily: 'Montserrat'),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: filteredDevices.length,
+                          scrollDirection: Axis.vertical,
+                          itemBuilder: (context, index) {
+                            bool last = filteredDevices.length - 1 == index;
+                            return Padding(
+                                padding: last
+                                    ? EdgeInsets.only(bottom: 60)
+                                    : EdgeInsets.only(bottom: 0),
+                                child: HomeCardWidget(
+                                    index: index,
+                                    context: context,
+                                    homeItemList: filteredDevices[index]));
+                          },
+                        ),
+                ),
+              ],
+            );
+          }
+        });
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+}

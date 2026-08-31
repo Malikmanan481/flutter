@@ -1,0 +1,34 @@
+import 'package:flutter/material.dart';
+import 'package:speedotrack/globals.dart';
+
+class SummaryWidget extends StatelessWidget {
+  const SummaryWidget({
+    Key? key,
+    @required this.text,
+  }) : super(key: key);
+
+  final String? text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      child: Column(
+        children: <Widget>[
+          Image.asset('images/deviceTime.png', height: 60, width: 60, color: Globals.appColor),
+          SizedBox(
+            height: 10,
+          ),
+          Text(
+            text ?? '',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: Color(0xFF7E8188),
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.bold,
+                fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+}

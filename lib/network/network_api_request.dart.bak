@@ -1,0 +1,104 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart';
+import 'package:requests/requests.dart';
+import '../globals.dart';
+
+class NetworkHelper {
+  /// Per-attempt timeout for normal requests. A mobile request must never
+  /// hang longer than this. The old value here was 3600s (1 HOUR) — a single
+  /// stuck request froze the UI on an infinite loading spinner, which is
+  /// exactly what App Store users were seeing.
+  static const int _attemptTimeoutSeconds = 30;
+
+  /// Per-attempt timeout for the explicitly "long-running" request variants
+  /// (the *WithTimeout* methods exist on purpose for heavier endpoints).
+  /// Still bounded — generous, but never an hour.
+  static const int _longAttemptTimeoutSeconds = 90;
+
+  /// Total attempts = 1 initial try + retries.
+  static const int _maxAttempts = 3;
+
+  /// Runs [attempt] up to [_maxAttempts] times, consulting [_retryPolicy]
+  /// between failures. Returns the response body, or '' if every attempt
+  /// fails. The '' fallback intentionally preserves the previous return
+  /// contract so no existing caller needs to change.
+  Future<dynamic> _withRetry(Future<Response> Function() attempt) async {
+    for (var n = 1; n <= _maxAttempts; n++) {
+      try {
+        final response = await attempt();
+        return response.body;
+      } catch (e) {
+        final Duration? wait = _retryPolicy(n, e);
+        if (wait == null || n == _maxAttempts) {
+          // Surface the real cause in logs instead of silently discarding it.
+          debugPrint('NetworkHelper: giving up after attempt $n — $e');
+          return '';
+        }
+        debugPrint('NetworkHelper: attempt $n failed ($e) — retrying in $wait');
+        await Future.delayed(wait);
+      }
+    }
+    return '';
+  }
+
+  /// Decide whether — and how long to wait before — retrying a failed
+  /// request. Return the delay before the next attempt, or `null` to stop
+  /// retrying immediately.
+  ///
+  /// [attempt] is the 1-based number of the attempt that just failed.
+  /// [error]   is the exception that attempt threw.
+  ///
+  /// ─────────────────────────────────────────────────────────────────────
+  /// TODO(you): implement the retry strategy. This shapes real user-facing
+  /// behaviour, so it's your call. Things to weigh:
+  ///
+  ///  • Exponential backoff (e.g. 500ms → 1s → 2s) is gentler on a
+  ///    struggling server and rides out brief congestion; a fixed delay is
+  ///    simpler and more predictable.
+  ///  • Add a little jitter if you don't want every device retrying in
+  ///    lockstep after a server blip.
+  ///  • Fail fast on errors a retry can't fix — e.g. an HTTP 4xx visible in
+  ///    `error.toString()` — by returning `null`, so the user sees the
+  ///    failure quickly instead of waiting through doomed retries.
+  ///  • Remember the App Store root cause: a "no route" failure (IPv6-only
+  ///    network + raw IP) will fail every attempt — keep total retry time
+  ///    short so the UI can show an error fast rather than stalling.
+  ///
+  /// The line below is a safe placeholder so the app still builds — replace
+  /// it with your chosen policy.
+  /// ─────────────────────────────────────────────────────────────────────
+  static Duration? _retryPolicy(int attempt, Object error) {
+    return const Duration(seconds: 1); // placeholder — your turn
+  }
+
+  Future<dynamic> requestDataFromNetwork(
+      {String? urlFile, dynamic body, BuildContext? context}) {
+    final baseURL = '${Globals.baseUrl}/$urlFile';
+    return _withRetry(() => Requests.post(baseURL,
+        body: body,
+        timeoutSeconds: _attemptTimeoutSeconds,
+        persistCookies: true));
+  }
+
+  Future<dynamic> requestDataFromNetworkWithTimeout(
+      {String? urlFile, dynamic body, BuildContext? context}) {
+    final baseURL = '${Globals.baseUrl}/$urlFile';
+    return _withRetry(() => Requests.post(baseURL,
+        body: body, timeoutSeconds: _longAttemptTimeoutSeconds));
+  }
+
+  Future<dynamic> requestDataFromNetworkWithTimeoutGET(
+      {String? urlFile, dynamic body, BuildContext? context}) {
+    final baseURL = '${Globals.baseUrl}/$urlFile';
+    return _withRetry(() => Requests.get(baseURL,
+        queryParameters: body, timeoutSeconds: _longAttemptTimeoutSeconds));
+  }
+
+  Future<dynamic> requestWeatherFromNetworkGET(
+      {String? lat, String? lng, BuildContext? context}) {
+    final baseURL =
+        'http://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lng&units=metric&appid=7de33ca156c91dcf5c030b105acad0bd';
+    return _withRetry(() =>
+        Requests.get(baseURL, timeoutSeconds: _attemptTimeoutSeconds));
+  }
+}

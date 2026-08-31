@@ -1,0 +1,375 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+import 'package:get/get.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:rxdart/subjects.dart';
+import 'package:speedotrack/activity/activity_about_us.dart';
+import 'package:speedotrack/activity/activity_geofencemap.dart';
+import 'package:speedotrack/activity/activity_geofencemapedit.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/network/network_api_request.dart';
+
+class GeoFenceList {
+  final String zoneID;
+  final String name;
+  final String listVertices;
+
+  GeoFenceList(this.zoneID, this.name, this.listVertices);
+}
+
+class GeoFenceListActivity extends StatefulWidget {
+  @override
+  _GeoFenceListActivityState createState() => _GeoFenceListActivityState();
+}
+
+class _GeoFenceListActivityState extends State<GeoFenceListActivity> {
+  StreamController<List<GeoFenceList>> _geoFenceListStreamController =
+      BehaviorSubject();
+
+  Stream<List<GeoFenceList>> get geoFenceListStream =>
+      _geoFenceListStreamController.stream;
+
+  StreamSink<List<GeoFenceList>> get geoFenceListSink =>
+      _geoFenceListStreamController.sink;
+  List<GeoFenceList> geoFenceList = [];
+  List<String> nameList = [];
+  Map<String, GeoFenceList> zoneList = {};
+
+  // Helper method to convert Traccar WKT area (POLYGON / CIRCLE) to lat,lng string format
+  String _parseTraccarAreaToVertices(String area) {
+    if (area.isEmpty) return "0,0";
+    try {
+      if (area.startsWith("POLYGON")) {
+        // Extract content inside POLYGON(( ... ))
+        String coords = area.replaceAll(RegExp(r'POLYGON\s*\(\(\s*|\s*\)\)'), '');
+        List<String> points = coords.split(',');
+        List<String> formatted = [];
+        for (var pt in points) {
+          var parts = pt.trim().split(RegExp(r'\s+'));
+          if (parts.length >= 2) {
+            formatted.add("${parts[0]},${parts[1]}");
+          }
+        }
+        return formatted.join(',');
+      } else if (area.startsWith("CIRCLE")) {
+        // Extract center point inside CIRCLE(lat lon, radius)
+        String content = area.replaceAll(RegExp(r'CIRCLE\s*\(\s*|\s*\)'), '');
+        var mainParts = content.split(',');
+        if (mainParts.isNotEmpty) {
+          var coords = mainParts[0].trim().split(RegExp(r'\s+'));
+          if (coords.length >= 2) {
+            return "${coords[0]},${coords[1]}";
+          }
+        }
+      }
+    } catch (e) {
+      print("Error parsing Traccar area WKT: $e");
+    }
+    return "0,0";
+  }
+
+  void fetchData() async {
+    try {
+      // Connect to Traccar REST API endpoint: /api/geofences
+      var response = await NetworkHelper().requestDataFromNetwork(
+          urlFile: '/api/geofences',
+          httpMethod: 'GET', // Standard Traccar GET fetch
+          context: context);
+
+      if (response != null && response.isNotEmpty) {
+        List<dynamic> decodedList = jsonDecode(response);
+        geoFenceList.clear();
+        nameList.clear();
+
+        for (var item in decodedList) {
+          String id = item['id'].toString();
+          String name = item['name'] ?? '';
+          String wktArea = item['area'] ?? '';
+
+          // Convert Traccar WKT area string into vertex format expected by GeoFenceCard
+          String vertices = _parseTraccarAreaToVertices(wktArea);
+
+          nameList.add(name.toLowerCase());
+          geoFenceList.add(GeoFenceList(id, name, vertices));
+        }
+      }
+    } catch (e) {
+      print("Traccar Geofence Fetch Error: $e");
+    }
+
+    geoFenceListSink.add(geoFenceList);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+  }
+
+  @override
+  void dispose() {
+    _geoFenceListStreamController.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFFF6F6F6),
+      appBar: AppBar(
+        backgroundColor: Globals.appColor,
+        elevation: 0.0,
+        title: Text(
+          'geoFence'.tr,
+          style:
+              TextStyle(color: Color(0xFFF6F6F6), fontFamily: 'Baloo_Thambi_2'),
+        ),
+        iconTheme: IconThemeData(
+          color: Color(0xFFF6F6F6),
+        ),
+      ),
+      body: Container(
+        color: Color(0xFFF6F6F6),
+        child: StreamBuilder<List<GeoFenceList>>(
+            stream: geoFenceListStream,
+            builder: (context, snapshot) {
+              if (snapshot.data == null || snapshot.hasError) {
+                return Center(
+                    child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'fetchData'.tr,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Globals.appColor,
+                          fontSize: 14,
+                          decoration: TextDecoration.none,
+                          letterSpacing: 1,
+                          fontFamily: 'Montserrat'),
+                    ),
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(top: 10, left: 40, right: 40),
+                      child: CircularProgressIndicator(
+                        backgroundColor: Colors.transparent,
+                        strokeWidth: 3,
+                        valueColor:
+                            new AlwaysStoppedAnimation<Color>(Globals.appColor),
+                      ),
+                    ),
+                  ],
+                ));
+              }
+              if (snapshot.data!.length == 0) {
+                return Center(
+                    child: Text(
+                  'noFence'.tr,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: Globals.appColor,
+                      fontSize: 14,
+                      decoration: TextDecoration.none,
+                      letterSpacing: 1,
+                      fontFamily: 'Montserrat'),
+                ));
+              } else {
+                return ListView.builder(
+                  itemCount: snapshot.data!.length,
+                  scrollDirection: Axis.vertical,
+                  addAutomaticKeepAlives: false,
+                  physics: BouncingScrollPhysics(),
+                  cacheExtent: 10000,
+                  itemBuilder: (context, index) {
+                    bool last = snapshot.data!.length == (index + 1);
+                    return Padding(
+                      padding: last
+                          ? EdgeInsets.only(bottom: 60)
+                          : EdgeInsets.only(bottom: 0),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            CupertinoPageRoute(
+                              builder: (context) => GeoFenceMapEditActivity(
+                                id: snapshot.data![index].zoneID,
+                                name: snapshot.data![index].name,
+                                vertices: snapshot.data![index].listVertices,
+                              ),
+                            ),
+                          );
+                        },
+                        child: GeoFenceCard(
+                          name: snapshot.data![index].name,
+                          vertices: snapshot.data![index].listVertices,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }
+            }),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+              context,
+              CupertinoPageRoute(
+                  builder: (context) => GeoFenceMapActivity(
+                        nameList: nameList,
+                      )));
+        },
+        backgroundColor: Globals.appColor,
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class GeoFenceCard extends StatefulWidget {
+  final String? name;
+  final String? vertices;
+
+  const GeoFenceCard({Key? key, this.name, this.vertices}) : super(key: key);
+
+  @override
+  _GeoFenceCardState createState() => _GeoFenceCardState();
+}
+
+class _GeoFenceCardState extends State<GeoFenceCard> {
+  bool mapType = Globals.prefs!.getBool('mapHybrid') ?? false;
+  List<LatLng> polygonLatLngs = [];
+  double? latitude, longitude;
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      if (widget.vertices != null && widget.vertices!.isNotEmpty) {
+        String a = '[' + widget.vertices! + ']';
+        var ab = json.decode(a);
+        for (int i = 0; i < ab.length; i = i + 2) {
+          if (i + 1 < ab.length) {
+            polygonLatLngs.add(LatLng(
+                (ab[i] as num).toDouble(), (ab[i + 1] as num).toDouble()));
+          }
+        }
+      }
+    } catch (e) {
+      print("Error parsing vertices in card: $e");
+    }
+
+    if (polygonLatLngs.isNotEmpty) {
+      LatLng location = getCentralGeoCoordinate(polygonLatLngs);
+      latitude = location.latitude;
+      longitude = location.longitude;
+    } else {
+      latitude = 0.0;
+      longitude = 0.0;
+    }
+  }
+
+  LatLng getCentralGeoCoordinate(List<LatLng> geoCoordinates) {
+    if (geoCoordinates.length == 1) {
+      return geoCoordinates[0];
+    }
+
+    double x = 0;
+    double y = 0;
+    double z = 0;
+
+    for (LatLng geoCoordinate in geoCoordinates) {
+      double latitude = geoCoordinate.latitude * pi / 180;
+      double longitude = geoCoordinate.longitude * pi / 180;
+
+      x += cos(latitude) * cos(longitude);
+      y += cos(latitude) * sin(longitude);
+      z += sin(latitude);
+    }
+
+    int total = geoCoordinates.length;
+
+    x = x / total;
+    y = y / total;
+    z = z / total;
+
+    double centralLongitude = atan2(y, x);
+    double centralSquareRoot = sqrt(x * x + y * y);
+    double centralLatitude = atan2(z, centralSquareRoot);
+
+    return new LatLng(centralLatitude * 180 / pi, centralLongitude * 180 / pi);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(5))),
+      elevation: 5,
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Container(
+          height: 330,
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Text(
+                    widget.name ?? '',
+                    textAlign: TextAlign.start,
+                    style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        letterSpacing: 1.3,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Montserrat'),
+                  ),
+                  Spacer(),
+                  Icon(
+                    FontAwesomeIcons.shieldAlt,
+                    color: Globals.appColor,
+                  )
+                ],
+              ),
+              SizedBox(
+                height: 5,
+              ),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 150.0,
+                      height: 150.0,
+                      alignment: Alignment.center,
+                      decoration: new BoxDecoration(
+                        color: Colors.red.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(
+                height: 3,
+              ),
+              Text(
+                'actualZone'.tr,
+                style: TextStyle(
+                    color: Colors.black54, fontFamily: 'Baloo_Thambi_2'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

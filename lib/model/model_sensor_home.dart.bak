@@ -1,0 +1,9 @@
+import 'dart:ui';
+
+class SensorModelHome {
+  final String image;
+  final String text;
+  final Color color;
+
+  SensorModelHome(this.image, this.text, this.color);
+}

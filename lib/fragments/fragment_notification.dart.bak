@@ -1,0 +1,315 @@
+import 'dart:convert';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:speedotrack/activity/activity_notification_map.dart';
+import 'package:speedotrack/component/component_home_screen.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/model/model_notification_event.dart';
+import 'package:speedotrack/network/network_api_request.dart';
+import 'package:speedotrack/provider/NotificationProvider.dart';
+
+class NotificationItemModel {
+  final dynamic? dateTime;
+  final String? name;
+  final String? status;
+  final String? image;
+  final String? id;
+  final String? event_desc;
+
+  NotificationItemModel(
+      {this.dateTime,
+      this.name,
+      this.status,
+      this.image,
+      this.id,
+      this.event_desc});
+}
+
+class NotificationFragment extends StatefulWidget {
+  @override
+  _NotificationFragmentState createState() => _NotificationFragmentState();
+}
+
+class _NotificationFragmentState extends State<NotificationFragment> {
+  bool isSearching = false;
+  List<NotificationScreenEvent> rows = [];
+
+  void fetchData() async {
+    try {
+      var response = await NetworkHelper().requestDataFromNetworkWithTimeout(
+        urlFile: '/func/fn_events.php',
+        body: {
+          'cmd': 'load_last_event',
+        },
+        context: context,
+      );
+
+      if (response.isNotEmpty) {
+        var jsonResponse = jsonDecode(response);
+        if (jsonResponse != null) {
+          List<dynamic> modifiedRowsData = jsonResponse.map((json) {
+            if (json['speed'] is! String) {
+              json['speed'] = json['speed'].toString();
+            }
+            return json;
+          }).toList();
+
+          if (modifiedRowsData.isNotEmpty) {
+            List<NotificationScreenEvent> events = modifiedRowsData
+                .map((json) => NotificationScreenEvent.fromJson(json))
+                .toList();
+
+            final provider =
+                Provider.of<NotificationProvider>(context, listen: false);
+            provider
+                .setRows(events.reversed.toList()); // Update provider's rows
+          }
+        }
+      }
+    } catch (e) {
+      print("Error fetching data: $e");
+    }
+  }
+
+  void handleEmptyResult() {
+    if (!Globals.notificationBloc!.isClosed()) {
+      Globals.notificationBloc!.notificationListSink.add([]);
+    }
+  }
+
+  void updateUI() {
+    List<NotificationItemModel> notificationItemModel = [];
+    for (NotificationScreenEvent event in rows) {
+      notificationItemModel.add(NotificationItemModel(
+          dateTime: event.dtTracker.toString(),
+          id: event.eventId,
+          name: event.name,
+          status: event.type,
+          // Assuming 'status' maps to 'type'
+          image: 'images/imeiVehicle.png',
+          event_desc: event.eventDesc));
+    }
+    if (!Globals.notificationBloc!.isClosed()) {
+      if (!isSearching) {
+        Globals.notificationBloc!.notificationListSink
+            .add(notificationItemModel);
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    Globals.homeBloc!.homeListStream.listen((homeItemList) async {
+      if (rows.isNotEmpty) {
+        fetchData();
+      }
+      if (Globals.dataLoaded) {
+        fetchData();
+        Globals.dataLoaded = false;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var providerType = Provider.of<ProviderType>(context);
+    var notificationProvider = Provider.of<NotificationProvider>(context);
+    isSearching = providerType.search.isNotEmpty;
+
+    List<NotificationItemModel> notificationItemModel = [];
+
+    if (isSearching) {
+      notificationItemModel = notificationProvider.rows
+          .where((event) =>
+              event.name
+                  ?.toLowerCase()
+                  .contains(providerType.search.toLowerCase()) ??
+              false)
+          .map((event) => NotificationItemModel(
+                dateTime: event.dtServer,
+                id: event.eventId,
+                name: event.name ?? 'Unknown',
+                status: event.eventDesc ?? 'No description',
+                image: 'images/imeiVehicle.png',
+                event_desc: event.eventDesc ?? 'No description',
+              ))
+          .toList();
+    } else {
+      notificationItemModel = notificationProvider.rows
+          .map((event) => NotificationItemModel(
+                dateTime: event.dtTracker.toString(),
+                id: event.eventId,
+                name: event.name,
+                status: event.type,
+                image: 'images/imeiVehicle.png',
+                event_desc: event.eventDesc,
+              ))
+          .toList();
+    }
+
+    return Stack(
+      children: <Widget>[
+        Container(
+          color: Color(0xFFF6F6F6),
+          child: ListView.builder(
+            itemCount: notificationItemModel.length,
+            itemBuilder: (context, index) {
+              bool last = notificationItemModel.length == (index + 1);
+              return Padding(
+                padding: last
+                    ? EdgeInsets.only(bottom: 60)
+                    : EdgeInsets.only(bottom: 0),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (context) => NotificationMapActivity(
+                          id: notificationItemModel[index].id!,
+                        ),
+                      ),
+                    );
+                  },
+                  child: NotificationCard(
+                    statusText: notificationItemModel[index].event_desc ??
+                        'No description',
+                    dateTime: notificationItemModel[index].dateTime ?? 'N/A',
+                    imageURI: notificationItemModel[index].image ??
+                        'images/default.png',
+                    deviceName:
+                        notificationItemModel[index].name ?? 'Unknown Device',
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Align(
+          alignment: Alignment.bottomRight,
+          child: Container(
+            width: 50.0,
+            height: 50.0,
+            margin: EdgeInsets.only(bottom: 70, right: 15),
+            child: RawMaterialButton(
+              shape: CircleBorder(),
+              elevation: 15.0,
+              fillColor: Globals.appColor,
+              child: Icon(
+                Icons.refresh,
+                size: 15,
+                color: Color(0xFFF6F6F6),
+              ),
+              onPressed: fetchData, // Reloads data from the network
+            ),
+          ),
+        )
+      ],
+    );
+  }
+}
+
+class NotificationCard extends StatelessWidget {
+  final String? statusText, deviceName, imageURI, dateTime;
+
+  const NotificationCard(
+      {Key? key,
+      this.statusText,
+      this.deviceName,
+      this.imageURI,
+      this.dateTime})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(5))),
+      elevation: 5,
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Container(
+          height: 50,
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                flex: 6,
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      statusText!,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.start,
+                      maxLines: 1,
+                      style: TextStyle(
+                          color: Color(0xFF7E8188),
+                          fontSize: 11,
+                          letterSpacing: 1.3,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Montserrat'),
+                    ),
+                    SizedBox(
+                      height: 5,
+                    ),
+                    Text(
+                      deviceName!,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.start,
+                      maxLines: 1,
+                      style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 14,
+                          letterSpacing: 1.3,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Montserrat'),
+                    ),
+                  ],
+                ),
+              ),
+              Spacer(),
+              // Container(
+              //   child: Icon(
+              //     Icons.notifications,
+              //     color: Color(0xFF7E8188),
+              //   ),
+              //   height: 40,
+              //   width: 40,
+              // ),
+              Container(
+                child: Image.asset(
+                  "images/notify_icon.png",
+                  width: 30,
+                  height: 30,
+                ),
+              ),
+              SizedBox(
+                width: 20,
+              ),
+              Text(
+                '${dateTime.toString().split(' ')[0]}\n${dateTime.toString().split(' ')[1]}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Color(0xFF7E8188),
+                    fontSize: 11,
+                    letterSpacing: 1.3,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Montserrat'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

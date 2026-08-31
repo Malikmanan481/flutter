@@ -1,0 +1,2 @@
+/Volumes/gennissi_gps/GpsServerApp/trackwheel/android/app/.cxx/Debug/r4r4u5s1/x86/CMakeFiles/edit_cache.dir
+/Volumes/gennissi_gps/GpsServerApp/trackwheel/android/app/.cxx/Debug/r4r4u5s1/x86/CMakeFiles/rebuild_cache.dir

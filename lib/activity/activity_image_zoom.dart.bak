@@ -1,0 +1,62 @@
+import 'package:get/get.dart';
+import 'package:extended_image/extended_image.dart';
+import 'package:flutter/material.dart';
+import 'package:speedotrack/activity/activity_about_us.dart';
+
+import '../globals.dart';
+
+class ImageZoomActivity extends StatefulWidget {
+  final String? url;
+
+  const ImageZoomActivity({Key? key, @required this.url}) : super(key: key);
+
+  @override
+  _ImageZoomActivityState createState() => _ImageZoomActivityState(url!);
+}
+
+class _ImageZoomActivityState extends State<ImageZoomActivity> {
+  final String imageURL;
+
+  _ImageZoomActivityState(this.imageURL);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFFF6F6F6),
+      appBar: AppBar(
+        backgroundColor: Globals.appColor,
+        elevation: 0.0,
+        title: Text(
+          'viewImage'.tr,
+          style:
+              TextStyle(color: Color(0xFFF6F6F6), fontFamily: 'Baloo_Thambi_2'),
+        ),
+        iconTheme: IconThemeData(
+          color: Color(0xFFF6F6F6), //change your color here
+        ),
+      ),
+      body: Container(
+        child: ExtendedImage.network(
+          imageURL,
+          height: double.infinity,
+          width: double.infinity,
+//enableLoadState: false,
+          mode: ExtendedImageMode.gesture,
+          initGestureConfigHandler: (state) {
+            return GestureConfig(
+              minScale: 0.9,
+              animationMinScale: 0.7,
+              maxScale: 3.0,
+              animationMaxScale: 3.5,
+              speed: 1.0,
+              inertialSpeed: 100.0,
+              initialScale: 1.0,
+              inPageView: false,
+              initialAlignment: InitialAlignment.center,
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

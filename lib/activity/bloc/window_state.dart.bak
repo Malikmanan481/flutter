@@ -1,0 +1,11 @@
+import 'package:equatable/equatable.dart';
+abstract class WindowState extends Equatable {
+  @override
+  List<Object> get props => [];
+
+}
+class PositionChangedState extends WindowState{
+  final double? offsetY, offsetX;
+  PositionChangedState({this.offsetX, this.offsetY});
+}
+class NoEventState extends WindowState{}

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Skill(superpowers:systematic-debugging)",
+      "Bash(curl -s -o /dev/null -w \"HTTP root: code=%{http_code} time=%{time_total}s redirect=%{redirect_url}\\\\n\" --max-time 15 http://212.56.40.116/)",
+      "Bash(curl -s -I --max-time 15 http://212.56.40.116/)",
+      "Bash(nslookup 212.56.40.116)",
+      "Bash(curl -6 -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 8 http://212.56.40.116/)",
+      "Bash(grep -rnEi \"https?://[a-z0-9.-]+\\\\.[a-z]{2,}\" lib/ android/app/src/main)",
+      "Bash(plutil -lint ios/Runner/Info.plist)",
+      "Bash(plutil -extract NSAppTransportSecurity xml1 -o - ios/Runner/Info.plist)"
+    ]
+  }
+}

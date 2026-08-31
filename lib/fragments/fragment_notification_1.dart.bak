@@ -1,0 +1,311 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:speedotrack/activity/activity_notification_map.dart';
+import 'package:speedotrack/component/component_home_screen.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/model/model_notification_event.dart';
+import 'package:speedotrack/network/network_api_request.dart';
+
+class NotificationItemModel {
+  final dynamic? dateTime;
+  final String? name;
+  final String? status;
+  final String? image;
+  final String? id;
+
+  NotificationItemModel(
+      {this.dateTime, this.name, this.status, this.image, this.id});
+}
+
+class NotificationFragment extends StatefulWidget {
+  @override
+  _NotificationFragmentState createState() => _NotificationFragmentState();
+}
+
+class _NotificationFragmentState extends State<NotificationFragment> {
+  bool isSearching = false;
+  List<dynamic> rows = [];
+
+  List<NotificationItemModel> notificationItemModel = [];
+  List<NotificationItemModel> n = [];
+  BuildContext? context1;
+  Timer? _timer;
+
+  void fetchData() async {
+    var response = await NetworkHelper().requestDataFromNetworkWithTimeout(
+      urlFile: '/func/fn_events.php',
+      body: {
+        'cmd': 'load_last_event',
+      },
+      context: context1,
+    );
+
+    if (response.isNotEmpty && mounted) {
+      var jsonResponse = jsonDecode(response);
+      if (jsonResponse != null) {
+        List<dynamic> modifiedRowsData = jsonResponse.map((json) {
+          if (json['speed'] is! String) {
+            json['speed'] = json['speed'].toString();
+          }
+          return json;
+        }).toList();
+
+        if (modifiedRowsData.isNotEmpty) {
+          List<NotificationScreenEvent> events = modifiedRowsData
+              .map((json) => NotificationScreenEvent.fromJson(json))
+              .toList();
+
+          for (var event in events) {
+            int index = rows.indexWhere((e) => e.eventId == event.eventId);
+            if (index == -1) {
+              rows.add(event);
+            } else if (rows[index] != event) {
+              rows[index] = event;
+            }
+          }
+        }
+      }
+      if (rows.isNotEmpty) {
+        updateUI();
+      }
+    }
+  }
+
+  void updateUI() {
+    if (!mounted) return; // Check if the widget is still mounted
+    for (NotificationScreenEvent event in rows) {
+      int index =
+          notificationItemModel.indexWhere((item) => item.id == event.eventId);
+      if (index == -1) {
+        // If the event is not in the list, add it
+        notificationItemModel.add(NotificationItemModel(
+          dateTime: event.dtTracker.toString(),
+          id: event.eventId,
+          name: event.name,
+          status: event.type,
+          image: 'images/imeiVehicle.png',
+        ));
+      } else {
+        // Update the existing item
+        notificationItemModel[index] = NotificationItemModel(
+          dateTime: event.dtTracker.toString(),
+          id: event.eventId,
+          name: event.name,
+          status: event.type,
+          image: 'images/imeiVehicle.png',
+        );
+      }
+    }
+    setState(() {
+      notificationItemModel = List.from(notificationItemModel);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+    _timer = Timer.periodic(Duration(seconds: 10), (timer) {
+      print("data updated");
+      fetchData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Cancel the timer when disposing the widget
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    context1 = context;
+    var providerType = Provider.of<ProviderType>(context);
+    if (providerType.searchStatus) {
+      isSearching = providerType.search.isEmpty ? false : true;
+      if (isSearching) {
+        List<NotificationItemModel> notificationItemModel = [];
+        if (rows != null) {
+          if (rows.length > 0) {
+            for (int i = 0; i < rows.length; i++) {
+              String id = rows[i]['id'];
+              List<dynamic> cellList = rows[i]['cell'];
+              if (cellList[1]
+                      .toString()
+                      .toLowerCase()
+                      .contains(providerType.search.toLowerCase()) ||
+                  cellList[2]
+                      .toString()
+                      .toLowerCase()
+                      .contains(providerType.search.toLowerCase())) {
+                notificationItemModel.add(NotificationItemModel(
+                    dateTime: cellList[0],
+                    id: id,
+                    name: cellList[1],
+                    status: cellList[2],
+                    image: 'images/imeiVehicle.png'));
+              }
+            }
+          }
+        }
+      } else {
+        updateUI();
+      }
+    }
+    return Stack(
+      children: <Widget>[
+        Container(
+            child: ListView.builder(
+                itemCount: notificationItemModel.length,
+                scrollDirection: Axis.vertical,
+                physics: BouncingScrollPhysics(),
+                addAutomaticKeepAlives: true,
+                cacheExtent: 10000,
+                itemBuilder: (context, index) {
+                  bool last = notificationItemModel.length == (index + 1);
+                  return Padding(
+                    padding: last
+                        ? EdgeInsets.only(bottom: 60)
+                        : EdgeInsets.only(bottom: 0),
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            CupertinoPageRoute(
+                                builder: (context) => NotificationMapActivity(
+                                      id: notificationItemModel[index].id!,
+                                    )));
+                      },
+                      child: NotificationCard(
+                          statusText: notificationItemModel[index].status!,
+                          dateTime: notificationItemModel[index].dateTime,
+                          imageURI: notificationItemModel[index].image!,
+                          deviceName: notificationItemModel[index].name!),
+                    ),
+                  );
+                })),
+        Align(
+          alignment: Alignment.bottomRight,
+          child: Container(
+              width: 50.0,
+              height: 50.0,
+              margin: EdgeInsets.only(bottom: 70, right: 15),
+              child: new RawMaterialButton(
+                  shape: new CircleBorder(),
+                  elevation: 15.0,
+                  fillColor: Globals.appColor,
+                  child: Icon(
+                    Icons.refresh,
+                    size: 15,
+                    color: Color(0xFFF6F6F6),
+                  ),
+                  onPressed: () {
+                    fetchData();
+                  })),
+        )
+      ],
+    );
+  }
+}
+
+class NotificationCard extends StatelessWidget {
+  final String? statusText, deviceName, imageURI, dateTime;
+
+  const NotificationCard(
+      {Key? key,
+      this.statusText,
+      this.deviceName,
+      this.imageURI,
+      this.dateTime})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(5))),
+      elevation: 5,
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Container(
+          height: 50,
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                flex: 6,
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      statusText!,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.start,
+                      maxLines: 1,
+                      style: TextStyle(
+                          color: Color(0xFF7E8188),
+                          fontSize: 11,
+                          letterSpacing: 1.3,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Montserrat'),
+                    ),
+                    SizedBox(
+                      height: 5,
+                    ),
+                    Text(
+                      deviceName!,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.start,
+                      maxLines: 1,
+                      style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 14,
+                          letterSpacing: 1.3,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Montserrat'),
+                    ),
+                  ],
+                ),
+              ),
+              Spacer(),
+              // Container(
+              //   child: Icon(
+              //     Icons.notifications,
+              //     color: Color(0xFF7E8188),
+              //   ),
+              //   height: 40,
+              //   width: 40,
+              // ),
+              Container(
+                child: Image.asset(
+                  "images/notify_icon.png",
+                  width: 30,
+                  height: 30,
+                ),
+              ),
+              SizedBox(
+                width: 20,
+              ),
+              Text(
+                '${dateTime.toString().split(' ')[0]}\n${dateTime.toString().split(' ')[1]}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Color(0xFF7E8188),
+                    fontSize: 11,
+                    letterSpacing: 1.3,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Montserrat'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

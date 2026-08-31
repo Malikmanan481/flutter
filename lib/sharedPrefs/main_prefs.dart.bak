@@ -1,0 +1,15 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+class MainPrefs {
+  static String isLoggedIn = 'is_logged_in';
+  static String fnSettings = 'fn_settings';
+  static String notificationPrefs = 'notification_pref';
+  static String keyIMEI = 'imei';
+  static String appFirstTime = 'app_first_time';
+  static String isFirstTime = 'IS_FIRST_TIME';
+
+  Future<SharedPreferences> setMainPrefs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs;
+  }
+}

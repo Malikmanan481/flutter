@@ -1,0 +1,338 @@
+import 'dart:io';
+import 'dart:math';
+import 'package:animations/animations.dart';
+import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:speedotrack/Network/network_api_request.dart';
+import 'package:speedotrack/component/text_form_field_with_datetime.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+
+showShareLocationDialog(
+    BuildContext context, String date, Function() onCanceled, String imei) {
+  /// Modify => showDialog to showModal
+  showModal(
+    context: context,
+    builder: (BuildContext context) {
+      return Dialog(
+        elevation: 0.0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Share Location',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                  ),
+                  InkWell(
+                      onTap: onCanceled,
+                      child: Image.asset(
+                        'images/cancel.png',
+                        color: Color(0xFFCCCCCC),
+                        width: 15.0,
+                      )),
+                ],
+              ),
+              SizedBox(height: 10.0),
+              ShareLocationWidget(date: date, imei: imei)
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class ShareLocationWidget extends StatefulWidget {
+  final String? imei, date;
+
+  ShareLocationWidget({Key? key, this.imei, this.date}) : super(key: key);
+
+  @override
+  _ShareLocationWidgetState createState() => _ShareLocationWidgetState();
+}
+
+class _ShareLocationWidgetState extends State<ShareLocationWidget>
+    with TickerProviderStateMixin {
+  AnimationController? smsButtonAnimationController;
+  AnimationController? shareButtonAnimationController;
+  AnimationController? generateButtonAnimationController;
+  String? link;
+  TextEditingController? dateTextEditingController;
+  @override
+  void initState() {
+    super.initState();
+    smsButtonAnimationController = AnimationController(
+        duration: const Duration(milliseconds: 150), vsync: this);
+    shareButtonAnimationController = AnimationController(
+        duration: const Duration(milliseconds: 150), vsync: this);
+    generateButtonAnimationController = AnimationController(
+        duration: const Duration(milliseconds: 150), vsync: this);
+    dateTextEditingController = TextEditingController(text: widget.date);
+  }
+
+  final String _chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
+  Random _rnd = Random();
+  String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
+      length, (_) => _chars.codeUnitAt(_rnd.nextInt(_chars.length))));
+
+  Future<List?> generateLink(String imei, String expiryDate, String id) async {
+    var response = await NetworkHelper().requestDataFromNetwork(
+        urlFile: '/func/fn_share.php',
+        body: {
+          "cmd": "save_share_position",
+          "share_id": "false",
+          "active": "true",
+          "name": "mgt",
+          "email": "mgt@mgt.com",
+          "phone": "00",
+          "imei": imei,
+          "expire": "true",
+          "expire_dt": expiryDate,
+          "send_email": "false",
+          "send_sms": "false",
+          "delete_expired": "true",
+          "su": id
+        },
+        context: context);
+
+    List returningList = [];
+    if (response == "OK") {
+      returningList.add(1);
+    } else {
+      returningList.add(0);
+      returningList.add("Something went wrong. Please try again later.");
+    }
+    return returningList;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return link == null
+        ? Container(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Share Location till',
+                  style: TextStyle(color: Color(0xFF6A6A6A), fontSize: 11),
+                ),
+                SizedBox(
+                  height: 5.0,
+                ),
+                CustomTextFormFieldWithDataTime(
+                  controller: dateTextEditingController,
+                  onChanged: (value) {},
+                ),
+                SizedBox(
+                  height: 10.0,
+                ),
+                InkWell(
+                  onTap: () {
+                    //code
+                    setState(() {
+                      generateButtonAnimationController!.forward();
+                      String id = getRandomString(32);
+                      generateLink(
+                        widget.imei!,
+                        dateTextEditingController!.text,
+                        id,
+                      ).then((value) {
+                        if (mounted) {
+                          setState(() {
+                            link = Globals.baseUrl +
+                                "/index.php?su=" +
+                                id +
+                                "&m=true";
+                          });
+                        }
+                      });
+                    });
+                  },
+                  child: ScaleTransition(
+                    scale: Tween(begin: 1.0, end: .9).animate(CurvedAnimation(
+                        parent: generateButtonAnimationController!,
+                        curve: Curves.bounceIn))
+                      ..addStatusListener((status) {
+                        if (status == AnimationStatus.completed) {
+                          generateButtonAnimationController!.reverse();
+                        }
+                      }),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width,
+                      padding: EdgeInsets.only(
+                          left: 2.0, right: 2.0, top: 10.0, bottom: 10.0),
+                      decoration: BoxDecoration(
+                        color: Globals.appColor,
+                        border: Border.all(color: Globals.appColor, width: 1),
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                      child: Center(
+                          child: Text('Generate The Link',
+                              style: TextStyle(
+                                  decoration: TextDecoration.none,
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500))),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          )
+        : Container(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Generated Link',
+                  style: TextStyle(color: Color(0xFF6A6A6A), fontSize: 11),
+                ),
+                SizedBox(
+                  height: 5.0,
+                ),
+                Container(
+                  padding: EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFF1F1F1),
+                    borderRadius: BorderRadius.circular(5.0),
+                  ),
+                  child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Text(
+                        link!,
+                        style:
+                            TextStyle(color: Color(0xFF212121), fontSize: 15),
+                      )),
+                ),
+                SizedBox(
+                  height: 10,
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          smsButtonAnimationController!.forward();
+                          String uri;
+                          if (Platform.isAndroid) {
+                            uri = 'sms:?body=' + link!;
+                          } else {
+                            uri = 'sms:&body=' + link!;
+                          }
+                          launchUrlString(uri);
+                          Navigator.pop(context);
+                        },
+                        child: ScaleTransition(
+                          scale: Tween(begin: 1.0, end: .9).animate(
+                              CurvedAnimation(
+                                  parent: smsButtonAnimationController!,
+                                  curve: Curves.bounceIn))
+                            ..addStatusListener((status) {
+                              if (status == AnimationStatus.completed) {
+                                smsButtonAnimationController!.reverse();
+                              }
+                            }),
+                          child: Container(
+                            padding: EdgeInsets.only(
+                                left: 2.0, right: 2.0, top: 10.0, bottom: 10.0),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFF26611),
+                              border: Border.all(
+                                  color: Color(0xFFF26611), width: 1),
+                              borderRadius: BorderRadius.circular(2.0),
+                            ),
+                            child: Center(
+                                child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              //mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'images/sms.png',
+                                  height: 20,
+                                ),
+                                SizedBox(
+                                  width: 10.0,
+                                ),
+                                Text('SMS',
+                                    style: TextStyle(
+                                        decoration: TextDecoration.none,
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500)),
+                              ],
+                            )),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 10.0,
+                    ),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          shareButtonAnimationController!.forward();
+                          Share.share(link!, subject: 'Share Position');
+                          Navigator.pop(context);
+                        },
+                        child: ScaleTransition(
+                          scale: Tween(begin: 1.0, end: .9).animate(
+                              CurvedAnimation(
+                                  parent: shareButtonAnimationController!,
+                                  curve: Curves.bounceIn))
+                            ..addStatusListener((status) {
+                              if (status == AnimationStatus.completed) {
+                                shareButtonAnimationController!.reverse();
+                              }
+                            }),
+                          child: Container(
+                            padding: EdgeInsets.only(
+                                left: 2.0, right: 2.0, top: 10.0, bottom: 10.0),
+                            decoration: BoxDecoration(
+                              color: Color(0xFF0060A4),
+                              border: Border.all(
+                                  color: Color(0xFF0060A4), width: 1),
+                              borderRadius: BorderRadius.circular(2.0),
+                            ),
+                            child: Center(
+                                child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  'images/share.png',
+                                  height: 20,
+                                ),
+                                SizedBox(
+                                  width: 10.0,
+                                ),
+                                Text('Share',
+                                    style: TextStyle(
+                                        decoration: TextDecoration.none,
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500)),
+                              ],
+                            )),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          );
+  }
+}

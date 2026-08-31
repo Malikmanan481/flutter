@@ -1,0 +1,677 @@
+import 'dart:convert';
+
+import 'package:get/get.dart';
+import 'package:flutter/material.dart';
+import 'package:custom_progress_button/custom_progress_button.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:progress_dialog_null_safe/progress_dialog_null_safe.dart';
+import 'package:rflutter_alert/rflutter_alert.dart';
+import 'package:speedotrack/component/component_textfield.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/helper/helper.dart';
+import 'package:speedotrack/model/model_settings_fn.dart';
+
+import 'package:speedotrack/network/network_api_request.dart';
+import 'package:speedotrack/sharedPrefs/login_settings.dart';
+import 'package:speedotrack/service/notification_service.dart'; // Import Voice Notification Service
+import 'package:url_launcher/url_launcher.dart';
+
+class LockActivity extends StatefulWidget {
+  final String? name;
+  final String? imei;
+
+  const LockActivity({Key? key, this.name, this.imei}) : super(key: key);
+
+  @override
+  _LockActivityState createState() => _LockActivityState(name!, imei!);
+}
+
+class _LockActivityState extends State<LockActivity> {
+  _LockActivityState(this.name, this.imei);
+
+  final String? name;
+  final String? imei;
+  String? simNumber;
+
+  String? cmd;
+  final String warningLockMessage = 'warningLockMessage'.tr;
+  final String warningUnlockMessage = "warningUnlockMessage".tr;
+  ProgressDialog? pr;
+  String? unlockCmd, lockCmd;
+  bool supported = false;
+  TextEditingController customTextController = new TextEditingController();
+  TextEditingController passwordTextController = new TextEditingController();
+
+  /// Updated to send commands directly to Traccar REST API (/api/commands/send) & play voice alerts
+  void sendCommand(String command) async {
+    try {
+      var response = await NetworkHelper().requestDataFromNetworkWithTimeout(
+          urlFile: '/api/commands/send',
+          body: {
+            'deviceId': int.tryParse(imei ?? '') ?? imei,
+            'type': 'custom',
+            'attributes': {
+              'data': command,
+            },
+          },
+          context: context);
+
+      bool isSuccess = response != null &&
+          response.toString().toLowerCase() != 'error' &&
+          response.toString().toLowerCase() != 'false';
+
+      if (isSuccess) {
+        // Trigger Voice Notification based on Lock/Unlock Action
+        if (command == lockCmd) {
+          NotificationService().showVoiceNotification(
+            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            title: 'Engine Cut-Off',
+            body: 'Vehicle engine has been disabled',
+            soundName: 'mobi_on', // Gari Kill Voice Sound
+          );
+        } else if (command == unlockCmd) {
+          NotificationService().showVoiceNotification(
+            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            title: 'Engine Restored',
+            body: 'Vehicle engine has been restored',
+            soundName: 'mobi_off', // Gari Release Voice Sound
+          );
+        }
+
+        Alert(
+          context: context,
+          useRootNavigator: false,
+          type: AlertType.success,
+          title: "success".tr,
+          desc: "commandSuccess".tr,
+          buttons: [
+            DialogButton(
+              child: Text(
+                "ok".tr,
+                style: TextStyle(color: Colors.white, fontSize: 20),
+              ),
+              color: Globals.appColor,
+              onPressed: () => Navigator.pop(context),
+            )
+          ],
+        ).show();
+      } else {
+        _showFailureAlert();
+      }
+    } catch (e) {
+      _showFailureAlert();
+    }
+  }
+
+  void _showFailureAlert() {
+    Alert(
+      context: context,
+      useRootNavigator: false,
+      type: AlertType.error,
+      title: "failure".tr,
+      desc: "commandUnsuccess".tr,
+      style: AlertStyle(
+          isCloseButton: true,
+          titleStyle: TextStyle(
+            fontFamily: 'Montserrat',
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+          descStyle: TextStyle(
+            fontFamily: 'Montserrat',
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF7E8188),
+          )),
+    ).show();
+  }
+
+  showOptionsDialog(
+      BuildContext context1, String message, String title, String command) {
+    showDialog(
+      context: context1,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            title,
+            style: TextStyle(
+                fontFamily: 'Montserrat',
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(message,
+              style: TextStyle(
+                fontFamily: 'Montserrat',
+                fontSize: 14,
+                color: Color(0xFF7E8188),
+              )),
+          actions: [
+            TextButton(
+              child: Text(
+                'cancel'.tr,
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF7E8188),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context1).showSnackBar(new SnackBar(
+                    content: new Text('Command cancelled by user!')));
+              },
+            ),
+            TextButton(
+              child: Text(
+                'gprs'.tr,
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                sendCommand(command);
+              },
+            ),
+            TextButton(
+              child: Text('sms'.tr,
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  )),
+              onPressed: () async {
+                Navigator.pop(context);
+                _sendSMS(simNumber!, command);
+              },
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  void _sendSMS(String number, String message) async {
+    final Uri smsUri = Uri(
+      scheme: 'sms',
+      path: number,
+      queryParameters: {
+        'body': message,
+      },
+    );
+
+    try {
+      if (await canLaunchUrl(smsUri)) {
+        await launchUrl(smsUri);
+      } else {
+        throw 'Could not launch SMS';
+      }
+    } catch (e) {
+      print('Error launching SMS: $e');
+    }
+  }
+
+  showPasswordDialog(String message, String title, String command) {
+    TextField passwordField = TextField(
+      controller: passwordTextController,
+      style: TextStyle(
+        fontFamily: 'Montserrat',
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        color: Colors.black,
+      ),
+      keyboardType: TextInputType.visiblePassword,
+      obscureText: true,
+      decoration: InputDecoration(
+          hintText: 'confirmPassword'.tr,
+          hintStyle: TextStyle(
+            fontFamily: 'Montserrat',
+            fontSize: 14,
+            color: Color(0xFF7E8188),
+            fontWeight: FontWeight.bold,
+          )),
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            title,
+            style: TextStyle(
+                fontFamily: 'Montserrat',
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(message,
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 14,
+                    color: Color(0xFF7E8188),
+                  )),
+              passwordField
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text(
+                'cancel'.tr,
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF7E8188),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('commandCancelled'.tr)));
+              },
+            ),
+            TextButton(
+              child: Text('proceed'.tr,
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  )),
+              onPressed: () {
+                if (passwordTextController.text.isNotEmpty) {
+                  if (passwordTextController.text ==
+                      Globals.prefs!.getString(LoginSettings.password)) {
+                    passwordTextController.clear();
+                    Navigator.pop(context);
+                    showOptionsDialog(
+                        context, 'commandType'.tr, 'selectType'.tr, command);
+                  } else {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        new SnackBar(content: new Text('wrongPassword'.tr)));
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      new SnackBar(content: new Text('passwordCantBlank'.tr)));
+                }
+              },
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  showAlertDialog(String message, String title, command) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            title.tr,
+            style: TextStyle(
+                fontFamily: 'Montserrat',
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(message,
+              style: TextStyle(
+                fontFamily: 'Montserrat',
+                fontSize: 14,
+                color: Color(0xFF7E8188),
+              )),
+          actions: [
+            TextButton(
+              child: Text(
+                'no'.tr,
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                Fluttertoast.showToast(
+                    msg: 'commandCancelled'.tr,
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.CENTER,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Globals.appColor,
+                    textColor: Colors.white,
+                    fontSize: 16.0);
+              },
+            ),
+            TextButton(
+              child: Text('yes'.tr,
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  )),
+              onPressed: () {
+                Navigator.pop(context);
+                showPasswordDialog(
+                    'passwordBeforeProceeding'.tr, 'confirmation'.tr, command);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      VehicleSettingsModel vehicleSettingsModel = VehicleSettingsModel.fromJson(
+          jsonDecode(Globals.prefs!.getString('${imei}_settings')!));
+      simNumber = vehicleSettingsModel.simNumber!;
+      cmd = vehicleSettingsModel.model!;
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('commandNA'.tr)));
+    }
+    pr = ProgressDialog(context);
+    try {
+      lockCmd = cmd!.split("@")[0];
+      unlockCmd = cmd!.split("@")[1];
+    } catch (e) {}
+    if (lockCmd != null && unlockCmd != null) {
+      if (Helper().charAt(lockCmd!, lockCmd!.length - 1) == '+' &&
+          Helper().charAt(unlockCmd!, unlockCmd!.length - 1) == '+') {
+        lockCmd = lockCmd!.substring(0, lockCmd!.length - 1);
+        unlockCmd = unlockCmd!.substring(0, unlockCmd!.length - 1);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (cmd != null && cmd!.isNotEmpty && cmd!.contains('@')) {
+      supported = true;
+    } else {
+      supported = false;
+    }
+    return Scaffold(
+      backgroundColor: Color(0xFFF6F6F6),
+      appBar: AppBar(
+        backgroundColor: Globals.appColor,
+        elevation: 0.0,
+        title: Text(
+          'lock'.tr,
+          style:
+              TextStyle(color: Color(0xFFF6F6F6), fontFamily: 'Baloo_Thambi_2'),
+        ),
+        iconTheme: IconThemeData(
+          color: Color(0xFFF6F6F6),
+        ),
+      ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Card(
+                elevation: 10,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(5))),
+                child: Container(
+                  height: 100,
+                  padding: EdgeInsets.all(10),
+                  width: double.infinity,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Text(
+                            '$name',
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18),
+                          ),
+                          Spacer(),
+                          Text(
+                            '$imei',
+                            style: TextStyle(
+                                color: Colors.grey,
+                                fontFamily: 'Montserrat',
+                                fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      SizedBox(
+                        height: 10,
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          supported
+                              ? 'deviceSupported'.tr + ' : $simNumber'
+                              : 'deviceUnsupported'.tr + ' : $simNumber',
+                          style: TextStyle(
+                              color: supported ? Colors.green : Colors.red,
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              alignment: Alignment.center,
+              width: double.infinity,
+              height: 150,
+              child: Row(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  InkWell(
+                    onTap: () {
+                      showOptionsDialog(
+                          context, 'commandType'.tr, 'selectType'.tr, lockCmd!);
+                    },
+                    child: Material(
+                      elevation: 10,
+                      clipBehavior: Clip.antiAlias,
+                      shape: CircleBorder(),
+                      shadowColor: Color(0xFFE94445),
+                      child: Container(
+                        width: 150.0,
+                        height: 150.0,
+                        decoration: new BoxDecoration(
+                          color: Color(0xFFE94445),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 100.0,
+                            height: 100.0,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                  begin: FractionalOffset.topCenter,
+                                  end: FractionalOffset.bottomCenter,
+                                  colors: <Color>[
+                                    Color(0xFFE94445),
+                                    Color(0xFFF18E90)
+                                  ]),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                                child: Icon(
+                              Icons.lock_outline,
+                              color: Colors.white,
+                              size: 40,
+                            )),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      showOptionsDialog(context, 'commandType'.tr,
+                          'selectType'.tr, unlockCmd!);
+                    },
+                    child: Material(
+                      elevation: 10,
+                      clipBehavior: Clip.antiAlias,
+                      shape: CircleBorder(),
+                      shadowColor: Color(0xFF3D9184),
+                      child: Container(
+                        width: 150.0,
+                        height: 150.0,
+                        decoration: new BoxDecoration(
+                          color: Color(0xFF3D9184),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 100.0,
+                            height: 100.0,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                  begin: FractionalOffset.topCenter,
+                                  end: FractionalOffset.bottomCenter,
+                                  colors: <Color>[
+                                    Color(0xFF3D9184),
+                                    Color(0xFF7BDFD5)
+                                  ]),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                                child: Icon(
+                              Icons.lock_open,
+                              color: Colors.white,
+                              size: 40,
+                            )),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              children: <Widget>[
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+                  child: Material(
+                    elevation: 5,
+                    color: Color(0xFFF6F6F6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(5))),
+                    child: CustomTextField(
+                      label: 'customCommand'.tr,
+                      textEditingController: customTextController,
+                      textInputType: TextInputType.visiblePassword,
+                    ),
+                  ),
+                ),
+                Center(
+                  child: CustomProgressButton(
+                    stateColors: {
+                      ButtonState.success: Colors.green,
+                      ButtonState.fail: Colors.redAccent,
+                      ButtonState.loading: Colors.red,
+                      ButtonState.idle: Globals.appColor,
+                    },
+                    onPressed: () async {
+                      if (customTextController.text.isNotEmpty) {
+                        showPasswordDialog('passwordBeforeProceeding'.tr,
+                            'confirmation'.tr, customTextController.text);
+                        customTextController.clear();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('commandCantBeEmpty'.tr)));
+                      }
+                    },
+                    height: 45,
+                    maxWidth: 240,
+                    progressWidget: CircularProgressIndicator(
+                        backgroundColor: Globals.appColor,
+                        valueColor:
+                            new AlwaysStoppedAnimation<Color>(Colors.white)),
+                    stateWidgets: {
+                      ButtonState.success: Text(
+                        'success'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.fail: Text(
+                        'failure'.tr,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      ButtonState.loading: Text(
+                        'send'.tr,
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18),
+                      ),
+                      ButtonState.idle: Text(
+                        'send'.tr,
+                        style: TextStyle(fontSize: 20, color: Colors.white),
+                      ),
+                    },
+                  ),
+                ),
+              ],
+            ),
+            RichText(
+              textAlign: TextAlign.center,
+              text: new TextSpan(
+                style: new TextStyle(
+                  fontSize: 14.0,
+                  color: Colors.black,
+                ),
+                children: <TextSpan>[
+                  new TextSpan(
+                      text: 'note'.tr,
+                      style: new TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                        fontFamily: 'Montserrat',
+                      )),
+                  new TextSpan(
+                      text: 'networkWarning'.tr,
+                      style: TextStyle(
+                          fontFamily: 'Montserrat',
+                          color: Color(0xFF7E8188),
+                          fontWeight: FontWeight.bold))
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

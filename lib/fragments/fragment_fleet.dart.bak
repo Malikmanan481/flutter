@@ -1,0 +1,1248 @@
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
+import 'package:speedotrack/bloc/bloc_home_item.dart';
+import 'package:speedotrack/component/component_home_card.dart';
+import 'package:speedotrack/globals.dart';
+import 'package:speedotrack/model/model_homelist.dart';
+
+class Indicator extends StatelessWidget {
+  final Color? color;
+  final String? text;
+  final bool? isSquare;
+  final double? size;
+  final Color? textColor;
+
+  const Indicator({
+    Key? key,
+    this.color,
+    this.text,
+    this.isSquare,
+    this.size = 16,
+    this.textColor = const Color(0xff505050),
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: isSquare! ? BoxShape.rectangle : BoxShape.circle,
+            color: color,
+          ),
+        ),
+        const SizedBox(
+          width: 4,
+        ),
+        Text(
+          text!,
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+        )
+      ],
+    );
+  }
+}
+
+typedef void OnWidgetSizeChange(Size size);
+
+class MeasureSize extends StatefulWidget {
+  final Widget? child;
+  final OnWidgetSizeChange? onChange;
+
+  const MeasureSize({
+    Key? key,
+    @required this.onChange,
+    @required this.child,
+  }) : super(key: key);
+
+  @override
+  _MeasureSizeState createState() => _MeasureSizeState();
+}
+
+class _MeasureSizeState extends State<MeasureSize> {
+  @override
+  Widget build(BuildContext context) {
+    SchedulerBinding.instance.addPostFrameCallback(postFrameCallback);
+    return Container(
+      key: widgetKey,
+      child: widget.child,
+    );
+  }
+
+  var widgetKey = GlobalKey();
+  var oldSize;
+
+  void postFrameCallback(_) {
+    var context = widgetKey.currentContext;
+    if (context == null) return;
+
+    var newSize = context.size;
+    if (oldSize == newSize) return;
+
+    oldSize = newSize;
+    widget.onChange!(newSize!);
+  }
+}
+
+enum vehicleType { All, Active, Inactive, Idle, Offline, NotConnected, Expired }
+
+class FleetFragment extends StatefulWidget {
+  static bool showingCircular = true;
+  @override
+  _FleetFragmentState createState() => _FleetFragmentState();
+}
+
+class _FleetFragmentState extends State<FleetFragment>
+    with AutomaticKeepAliveClientMixin<FleetFragment> {
+  int? touchedIndex;
+  Size logoCenterPosition = Size(0, 0);
+  vehicleType vehicle = vehicleType.All;
+  List<int> _movingIMEIArray = [];
+  List<int> _stoppedIMEIArray = [];
+  List<int> _idleIMEIArray = [];
+  List<int> _noDataIMEIArray = [];
+  List<int> _offlineIMEIArray = [];
+  List<int> _expireIMEIArray = [];
+  List<int> finalIMEIArray = [];
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Scaffold(
+      floatingActionButton: FleetFragment.showingCircular
+          ? null
+          : Container(
+              width: 50.0,
+              height: 50.0,
+              margin: EdgeInsets.only(bottom: 70, right: 15),
+              child: new RawMaterialButton(
+                  shape: new CircleBorder(),
+                  elevation: 15.0,
+                  fillColor: Globals.appColor,
+                  child: Icon(
+                    Icons.pie_chart,
+                    size: 15,
+                    color: Color(0xFFF6F6F6),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      FleetFragment.showingCircular = true;
+                    });
+                  })),
+      backgroundColor: Color(0xFFF6F6F6),
+      body: StreamBuilder<List<HomeItem>>(
+          stream: Globals.homeBloc!.homeListStream,
+          builder: (context, snapshot) {
+            if (snapshot.data == null ||
+                snapshot.hasError ||
+                snapshot.data!.length == 0) {
+              return Center(
+                  child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Fetching data for first time...',
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Globals.appColor,
+                        fontSize: 14,
+                        decoration: TextDecoration.none,
+                        letterSpacing: 1,
+                        fontFamily: 'Montserrat'),
+                  ),
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(top: 10, left: 40, right: 40),
+                    child: CircularProgressIndicator(
+                      backgroundColor: Colors.transparent,
+                      strokeWidth: 3,
+                      valueColor:
+                          new AlwaysStoppedAnimation<Color>(Globals.appColor),
+                    ),
+                  ),
+                ],
+              ));
+            } else {
+              _movingIMEIArray.clear();
+              _stoppedIMEIArray.clear();
+              _idleIMEIArray.clear();
+              _noDataIMEIArray.clear();
+              _offlineIMEIArray.clear();
+              _expireIMEIArray.clear();
+              for (int index = 0; index < snapshot.data!.length; index++) {
+                /* if (snapshot.data[index].expired) {
+                  _expireIMEIArray.add(index);
+                } else*/
+                {
+                  switch (snapshot.data![index].status) {
+                    case "m":
+                      _movingIMEIArray.add(index);
+                      break;
+                    case "s":
+                      _stoppedIMEIArray.add(index);
+                      break;
+                    case "i":
+                      _idleIMEIArray.add(index);
+                      break;
+                    case "off":
+                      _offlineIMEIArray.add(index);
+                      break;
+                    case "false":
+                      _noDataIMEIArray.add(index);
+                      break;
+                  }
+                }
+              }
+              return WillPopScope(
+                onWillPop: () async {
+                  if (!FleetFragment.showingCircular) {
+                    setState(() {
+                      FleetFragment.showingCircular = true;
+                    });
+                    return false;
+                  }
+                  return true;
+                },
+                child: AnimatedSwitcher(
+                  duration: Duration(milliseconds: 500),
+                  child: FleetFragment.showingCircular
+                      ? Container(
+                          width: MediaQuery.of(context).size.width / 1,
+                          height: MediaQuery.of(context).size.height / 1,
+                          child: ListView.builder(
+                              itemCount: 1,
+                              itemBuilder: (BuildContext context, int index) {
+                                return Card(
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(5))),
+                                  elevation: 5,
+                                  color: Colors.white,
+                                  child: Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 70.0, bottom: 70),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: <Widget>[
+                                          Stack(
+                                            children: <Widget>[
+                                              MeasureSize(
+                                                onChange: (size) {
+                                                  setState(() {
+                                                    logoCenterPosition = size;
+                                                  });
+                                                },
+                                                child: Material(
+                                                  color: Colors.transparent,
+                                                  elevation: 20,
+                                                  shape: CircleBorder(),
+                                                  child: Container(
+                                                      width:
+                                                          MediaQuery.of(context)
+                                                                  .size
+                                                                  .width /
+                                                              1,
+                                                      height: 150,
+                                                      child: PieChart(
+                                                        PieChartData(
+                                                            pieTouchData: PieTouchData(
+                                                                touchCallback:
+                                                                    (pieTouchResponse,
+                                                                        val) {}),
+                                                            borderData:
+                                                                FlBorderData(
+                                                              show: false,
+                                                            ),
+                                                            centerSpaceColor:
+                                                                Colors.white,
+                                                            sectionsSpace: 0,
+                                                            centerSpaceRadius:
+                                                                70,
+                                                            sections:
+                                                                showingSections()),
+                                                      )),
+                                                ),
+                                              ),
+                                              Positioned(
+                                                  left: logoCenterPosition.width /
+                                                              2 ==
+                                                          null
+                                                      ? MediaQuery.of(context)
+                                                                  .size
+                                                                  .width /
+                                                              2 -
+                                                          50
+                                                      : logoCenterPosition
+                                                                  .width /
+                                                              2 -
+                                                          50,
+                                                  top: logoCenterPosition
+                                                              .height /
+                                                          2 -
+                                                      50,
+                                                  child: SizedBox(
+                                                    height: 100,
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              10.0),
+                                                      child: Material(
+                                                          // with Material
+                                                          child: Image.asset(
+                                                            'assets/appsicon/icon.png',
+                                                            fit: BoxFit.cover,
+                                                          ),
+                                                          elevation: 20.0,
+                                                          borderRadius:
+                                                              BorderRadius.all(
+                                                                  Radius
+                                                                      .circular(
+                                                                          5)),
+                                                          color: Colors
+                                                              .transparent,
+                                                          clipBehavior:
+                                                              Clip.antiAlias),
+                                                    ),
+                                                  ))
+                                            ],
+                                          ),
+                                          SizedBox(
+                                            height: 40,
+                                          ),
+                                          SizedBox(
+                                            child: Text(
+                                              'Total: ${snapshot.data!.length}',
+                                              style: TextStyle(
+                                                  fontSize: 26,
+                                                  color: Colors.black54,
+                                                  fontFamily: 'Ubuntu_Mono',
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            height: 40,
+                                          ),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceEvenly,
+                                            children: <Widget>[
+                                              SizedBox(
+                                                width: 10,
+                                              ),
+                                              InkWell(
+                                                onTap: () {
+                                                  vehicle =
+                                                      vehicleType.Inactive;
+                                                  finalIMEIArray.clear();
+                                                  finalIMEIArray.addAll(
+                                                      _stoppedIMEIArray);
+                                                  setState(() {
+                                                    FleetFragment
+                                                            .showingCircular =
+                                                        false;
+                                                  });
+                                                },
+                                                child: Column(
+                                                  children: <Widget>[
+                                                    Stack(
+                                                      children: <Widget>[
+                                                        Container(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            shape: BoxShape
+                                                                .rectangle,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                            color: Colors
+                                                                .transparent,
+                                                          ),
+                                                          padding:
+                                                              EdgeInsets.all(5),
+                                                          child: Material(
+                                                            shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5))),
+                                                            elevation: 10,
+                                                            child: Container(
+                                                              height: 50,
+                                                              width: 50,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                shape: BoxShape
+                                                                    .rectangle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color:
+                                                                    Colors.red,
+                                                              ),
+                                                              clipBehavior: Clip
+                                                                  .antiAlias,
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .directions_car,
+                                                                  color: Colors
+                                                                      .white,
+                                                                  size: 35),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          right: 0,
+                                                          top: 0,
+                                                          child: Container(
+                                                            height: 25,
+                                                            width: 25,
+                                                            alignment: Alignment
+                                                                .center,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              //shape: BoxShape.circle,
+                                                              shape: BoxShape
+                                                                  .rectangle,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .all(Radius
+                                                                          .circular(
+                                                                              5)),
+                                                              color: Color(
+                                                                  0xFFF6F6F6),
+                                                            ),
+                                                            child: Container(
+                                                              child: Center(
+                                                                child: Text(
+                                                                  '${_stoppedIMEIArray.length}',
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          12,
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold),
+                                                                ),
+                                                              ),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                //shape: BoxShape.circle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color:
+                                                                    Colors.red,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    SizedBox(
+                                                      height: 10,
+                                                    ),
+                                                    Text(
+                                                      'Stopped',
+                                                      style: TextStyle(
+                                                          color: Colors.black54,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily:
+                                                              'Montserrat'),
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 10,
+                                              ),
+                                              InkWell(
+                                                onTap: () {
+                                                  vehicle = vehicleType.Active;
+                                                  finalIMEIArray.clear();
+                                                  finalIMEIArray
+                                                      .addAll(_movingIMEIArray);
+                                                  setState(() {
+                                                    FleetFragment
+                                                            .showingCircular =
+                                                        false;
+                                                  });
+                                                },
+                                                child: Column(
+                                                  children: <Widget>[
+                                                    Stack(
+                                                      children: <Widget>[
+                                                        Container(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            shape: BoxShape
+                                                                .rectangle,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                            color: Colors
+                                                                .transparent,
+                                                          ),
+                                                          padding:
+                                                              EdgeInsets.all(5),
+                                                          child: Material(
+                                                            shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5))),
+                                                            elevation: 10,
+                                                            child: Container(
+                                                              height: 50,
+                                                              width: 50,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                shape: BoxShape
+                                                                    .rectangle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color: Colors
+                                                                    .green,
+                                                              ),
+                                                              clipBehavior: Clip
+                                                                  .antiAlias,
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .directions_car,
+                                                                  color: Colors
+                                                                      .white,
+                                                                  size: 35),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          right: 0,
+                                                          top: 0,
+                                                          child: Container(
+                                                            height: 25,
+                                                            width: 25,
+                                                            alignment: Alignment
+                                                                .center,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              //shape: BoxShape.circle,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .all(Radius
+                                                                          .circular(
+                                                                              5)),
+                                                              color: Color(
+                                                                  0xFFF6F6F6),
+                                                            ),
+                                                            child: Container(
+                                                              child: Center(
+                                                                child: Text(
+                                                                  '${_movingIMEIArray.length}',
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          12,
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold),
+                                                                ),
+                                                              ),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                //shape: BoxShape.circle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color: Colors
+                                                                    .green,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    SizedBox(
+                                                      height: 10,
+                                                    ),
+                                                    Text(
+                                                      '      Moving       ',
+                                                      style: TextStyle(
+                                                          color: Colors.black54,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily:
+                                                              'Montserrat'),
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 10,
+                                              ),
+                                              InkWell(
+                                                onTap: () {
+                                                  vehicle = vehicleType.Idle;
+                                                  finalIMEIArray.clear();
+                                                  finalIMEIArray
+                                                      .addAll(_idleIMEIArray);
+                                                  setState(() {
+                                                    FleetFragment
+                                                            .showingCircular =
+                                                        false;
+                                                  });
+                                                },
+                                                child: Column(
+                                                  children: <Widget>[
+                                                    Stack(
+                                                      children: <Widget>[
+                                                        Container(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            shape: BoxShape
+                                                                .rectangle,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                            color: Colors
+                                                                .transparent,
+                                                          ),
+                                                          padding:
+                                                              EdgeInsets.all(5),
+                                                          child: Material(
+                                                            shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5))),
+                                                            elevation: 10,
+                                                            child: Container(
+                                                              height: 50,
+                                                              width: 50,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                shape: BoxShape
+                                                                    .rectangle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color: Color(
+                                                                    0xFFF4A445),
+                                                              ),
+                                                              clipBehavior: Clip
+                                                                  .antiAlias,
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .directions_car,
+                                                                  color: Colors
+                                                                      .white,
+                                                                  size: 35),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          right: 0,
+                                                          top: 0,
+                                                          child: Container(
+                                                            height: 25,
+                                                            width: 25,
+                                                            alignment: Alignment
+                                                                .center,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              //shape: BoxShape.circle,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .all(Radius
+                                                                          .circular(
+                                                                              5)),
+                                                              color: Color(
+                                                                  0xFFF6F6F6),
+                                                            ),
+                                                            child: Container(
+                                                              child: Center(
+                                                                child: Text(
+                                                                  '${_idleIMEIArray.length}',
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          12,
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold),
+                                                                ),
+                                                              ),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                //shape: BoxShape.circle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color: Color(
+                                                                    0xFFF4A445),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    SizedBox(
+                                                      height: 10,
+                                                    ),
+                                                    Text(
+                                                      'Idle',
+                                                      style: TextStyle(
+                                                          color: Colors.black54,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily:
+                                                              'Montserrat'),
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 10,
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(
+                                            height: 20,
+                                          ),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceEvenly,
+                                            children: <Widget>[
+                                              SizedBox(
+                                                width: 10,
+                                              ),
+                                              InkWell(
+                                                onTap: () {
+                                                  vehicle = vehicleType.Offline;
+                                                  finalIMEIArray.clear();
+                                                  finalIMEIArray.addAll(
+                                                      _offlineIMEIArray);
+                                                  setState(() {
+                                                    FleetFragment
+                                                            .showingCircular =
+                                                        false;
+                                                  });
+                                                },
+                                                child: Column(
+                                                  children: <Widget>[
+                                                    Stack(
+                                                      children: <Widget>[
+                                                        Container(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            shape: BoxShape
+                                                                .rectangle,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                            color: Colors
+                                                                .transparent,
+                                                          ),
+                                                          padding:
+                                                              EdgeInsets.all(5),
+                                                          child: Material(
+                                                            shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5))),
+                                                            elevation: 10,
+                                                            child: Container(
+                                                              height: 50,
+                                                              width: 50,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                shape: BoxShape
+                                                                    .rectangle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                              clipBehavior: Clip
+                                                                  .antiAlias,
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .directions_car,
+                                                                  color: Colors
+                                                                      .white,
+                                                                  size: 35),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          right: 0,
+                                                          top: 0,
+                                                          child: Container(
+                                                            height: 25,
+                                                            width: 25,
+                                                            alignment: Alignment
+                                                                .center,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              //shape: BoxShape.circle,
+                                                              shape: BoxShape
+                                                                  .rectangle,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .all(Radius
+                                                                          .circular(
+                                                                              5)),
+                                                              color: Color(
+                                                                  0xFFF6F6F6),
+                                                            ),
+                                                            child: Container(
+                                                              child: Center(
+                                                                child: Text(
+                                                                  '${_offlineIMEIArray.length}',
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          12,
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold),
+                                                                ),
+                                                              ),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                //shape: BoxShape.circle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    SizedBox(
+                                                      height: 10,
+                                                    ),
+                                                    Text(
+                                                      'Offline',
+                                                      style: TextStyle(
+                                                          color: Colors.black54,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily:
+                                                              'Montserrat'),
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 10,
+                                              ),
+                                              InkWell(
+                                                onTap: () {
+                                                  vehicle =
+                                                      vehicleType.NotConnected;
+                                                  finalIMEIArray.clear();
+                                                  finalIMEIArray
+                                                      .addAll(_noDataIMEIArray);
+                                                  setState(() {
+                                                    FleetFragment
+                                                            .showingCircular =
+                                                        false;
+                                                  });
+                                                },
+                                                child: Column(
+                                                  children: <Widget>[
+                                                    Stack(
+                                                      children: <Widget>[
+                                                        Container(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            shape: BoxShape
+                                                                .rectangle,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                            color: Colors
+                                                                .transparent,
+                                                          ),
+                                                          padding:
+                                                              EdgeInsets.all(5),
+                                                          child: Material(
+                                                            shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5))),
+                                                            elevation: 10,
+                                                            child: Container(
+                                                              height: 50,
+                                                              width: 50,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                shape: BoxShape
+                                                                    .rectangle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color:
+                                                                    Colors.blue,
+                                                              ),
+                                                              clipBehavior: Clip
+                                                                  .antiAlias,
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .directions_car,
+                                                                  color: Colors
+                                                                      .white,
+                                                                  size: 35),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          right: 0,
+                                                          top: 0,
+                                                          child: Container(
+                                                            height: 25,
+                                                            width: 25,
+                                                            alignment: Alignment
+                                                                .center,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              //shape: BoxShape.circle,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .all(Radius
+                                                                          .circular(
+                                                                              5)),
+                                                              color: Color(
+                                                                  0xFFF6F6F6),
+                                                            ),
+                                                            child: Container(
+                                                              child: Center(
+                                                                child: Text(
+                                                                  '${_noDataIMEIArray.length}',
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          12,
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold),
+                                                                ),
+                                                              ),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                //shape: BoxShape.circle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color:
+                                                                    Colors.blue,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    SizedBox(
+                                                      height: 10,
+                                                    ),
+                                                    Text(
+                                                      'Not Connected',
+                                                      style: TextStyle(
+                                                          color: Colors.black54,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily:
+                                                              'Montserrat'),
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 10,
+                                              ),
+                                              InkWell(
+                                                /*onTap: () {
+                                              vehicle = vehicleType.Expired;
+                                              finalIMEIArray.clear();
+                                              finalIMEIArray.addAll(_expireIMEIArray);
+                                              setState(() {
+                                                FleetFragment.showingCircular = false;
+                                              });
+                                            },*/
+                                                child: Column(
+                                                  children: <Widget>[
+                                                    Stack(
+                                                      children: <Widget>[
+                                                        Container(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            shape: BoxShape
+                                                                .rectangle,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                            color: Colors
+                                                                .transparent,
+                                                          ),
+                                                          padding:
+                                                              EdgeInsets.all(5),
+                                                          child: Material(
+                                                            shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5))),
+                                                            elevation: 10,
+                                                            child: Container(
+                                                              height: 50,
+                                                              width: 50,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                shape: BoxShape
+                                                                    .rectangle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color: Colors
+                                                                    .brown,
+                                                              ),
+                                                              clipBehavior: Clip
+                                                                  .antiAlias,
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .directions_car,
+                                                                  color: Colors
+                                                                      .white,
+                                                                  size: 35),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          right: 0,
+                                                          top: 0,
+                                                          child: Container(
+                                                            height: 25,
+                                                            width: 25,
+                                                            alignment: Alignment
+                                                                .center,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              //shape: BoxShape.circle,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .all(Radius
+                                                                          .circular(
+                                                                              5)),
+                                                              color: Color(
+                                                                  0xFFF6F6F6),
+                                                            ),
+                                                            child: Container(
+                                                              child: Center(
+                                                                  /*child: Text(
+                                                              '${_expireIMEIArray.length}',
+                                                              textAlign: TextAlign.center,
+                                                              style: TextStyle(
+                                                                  fontSize: 12,
+                                                                  color: Colors.white,
+                                                                  fontWeight: FontWeight.bold),
+                                                            ),*/
+                                                                  ),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                //shape: BoxShape.circle,
+                                                                borderRadius: BorderRadius
+                                                                    .all(Radius
+                                                                        .circular(
+                                                                            5)),
+                                                                color: Colors
+                                                                    .brown,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    SizedBox(
+                                                      height: 10,
+                                                    ),
+                                                    Text(
+                                                      'Expired',
+                                                      style: TextStyle(
+                                                          color: Colors.black54,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontFamily:
+                                                              'Montserrat'),
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 10,
+                                              ),
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }))
+                      : Container(
+                          color: Color(0xFFF6F6F6),
+                          child: ListView.builder(
+                            itemCount: finalIMEIArray.length,
+                            addAutomaticKeepAlives: false,
+                            scrollDirection: Axis.vertical,
+                            physics: BouncingScrollPhysics(),
+                            cacheExtent: 10000,
+                            itemBuilder: (context, index) {
+                              bool last = finalIMEIArray.length - 1 == index;
+                              return Padding(
+                                padding: last
+                                    ? EdgeInsets.only(bottom: 60)
+                                    : EdgeInsets.only(bottom: 0),
+                                child: HomeCardWidget(
+                                    index: index,
+                                    context: context,
+                                    homeItemList:
+                                        snapshot.data![finalIMEIArray[index]]),
+                              );
+                            },
+                          ),
+                        ),
+                ),
+              );
+            }
+          }),
+    );
+  }
+
+  Widget buildCard(int index, BuildContext context, HomeListItem homeItemList) {
+    return Container();
+  }
+
+  List<PieChartSectionData>? showingSections() {
+    return List.generate(6, (i) {
+      final isTouched = i == touchedIndex;
+      final double radius = isTouched ? 60 : 40;
+      switch (i) {
+        case 0:
+          return PieChartSectionData(
+            color: Colors.red,
+            value: _stoppedIMEIArray.length.toDouble(),
+            title: '',
+            radius: radius,
+          );
+        case 1:
+          return PieChartSectionData(
+            color: Colors.green,
+            value: _movingIMEIArray.length.toDouble(),
+            title: '',
+            radius: radius,
+          );
+        case 2:
+          return PieChartSectionData(
+            color: Color(0xFFF4A445),
+            value: _idleIMEIArray.length.toDouble(),
+            title: '',
+            radius: radius,
+          );
+        case 3:
+          return PieChartSectionData(
+            color: Colors.grey,
+            value: _offlineIMEIArray.length.toDouble(),
+            title: '',
+            radius: radius,
+          );
+        case 4:
+          return PieChartSectionData(
+            color: Colors.blue,
+            value: _noDataIMEIArray.length.toDouble(),
+            title: '',
+            radius: radius,
+          );
+        case 5:
+          return PieChartSectionData(
+            color: Colors.brown,
+            value: _expireIMEIArray.length.toDouble(),
+            title: '',
+            radius: radius,
+          );
+        default:
+          return PieChartSectionData();
+      }
+    });
+  }
+
+  @override
+  bool get wantKeepAlive => false;
+}

@@ -1,0 +1,46 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:speedotrack/activity/bloc/window_event.dart';
+import 'package:speedotrack/activity/bloc/window_state.dart';
+
+class WindowBloc extends Bloc<WindowEvent, WindowState> {
+  WindowBloc() : super(NoEventState());
+
+  WindowState get initialState => NoEventState();
+  double offsetY = 0.0;
+  double offsetX = 0.0;
+  double height = 0;
+  double width = 0;
+
+  @override
+  Stream<WindowState> mapEventToState(WindowEvent? event) async* {
+    if (event is ChangePositionEvent) {
+      var devicePixelRatio = Platform.isAndroid
+          ? MediaQuery.of(event.context!).devicePixelRatio
+          : 1.0;
+      if (height == 0 && width == 0) {
+        offsetY =
+            (event.screenCoordinate?.y.toDouble() ?? 0) / devicePixelRatio;
+        offsetX =
+            (event.screenCoordinate?.x.toDouble() ?? 0) / devicePixelRatio;
+      } else {
+        offsetY =
+            (event.screenCoordinate?.y.toDouble() ?? 0) / devicePixelRatio -
+                (height + 50);
+        offsetX =
+            (event.screenCoordinate?.x.toDouble() ?? 0) / devicePixelRatio -
+                ((width / 2));
+      }
+      yield PositionChangedState(offsetX: offsetX, offsetY: offsetY);
+      yield NoEventState();
+    } else if (event is WindowLoadedEvent) {
+      height = event.height!;
+      width = event.width!;
+      offsetY = offsetY - (height + 90);
+      offsetX = offsetX - ((width / 2));
+      yield PositionChangedState(offsetX: offsetX, offsetY: offsetY);
+      yield NoEventState();
+    }
+  }
+}

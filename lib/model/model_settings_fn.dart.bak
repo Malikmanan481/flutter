@@ -1,0 +1,1075 @@
+// class FnSettingsModel {
+class VehicleSettingsModel {
+/*  String protocol;
+  String groupID;
+  String driverID;
+  String trailerID;
+  String name;
+  String icon;
+  MapArrow mapArrow;
+  String mapIcon;
+  String tailColor;
+  String tailPoints;
+  String device;
+  String simNumber;
+  String model;
+  String vin;
+  String plateNumber;
+  String odometerType;
+  String engineHourType;
+  String odometer;
+  String engineHours;
+  FCR fcr;
+  String timeAdj;
+  Accuracy accuracy;
+  Map<String, Sensors> sensors;
+  Map<String, Service> service;
+  Map<String, CustomFields> customFields;
+  List<dynamic> params;
+  bool active;
+  bool objectExpire;
+  String objectExpireDate;*/
+  String? protocol;
+  String? groupID;
+  String? driverID;
+  String? trailerID;
+  String? name;
+  String? icon;
+  MapArrow? mapArrow;
+  String? mapIcon;
+  String? tailColor;
+  String? tailPoints;
+  String? device;
+  String? simNumber;
+  String? model;
+  String? vin;
+  String? plateNumber;
+  String? odometerType;
+  String? engineHourType;
+  int? odometer;
+  int? engineHours;
+  FCR? fcr;
+  String? timeAdj;
+  Accuracy? accuracy;
+  String? false1;
+  String? false2;
+  ParamAccvirt? paramAccvirt;
+  String? false3;
+  String? emptyString;
+  Map<String, Sensors>? sensors;
+  List<dynamic>? emptyList;
+  dynamic emptyList1;
+  List<dynamic>? stringVariable;
+  bool? active;
+  bool? objectExpire;
+  String? objectExpireDate;
+
+  List<dynamic> toJson() => [
+        protocol,
+        groupID,
+        driverID,
+        trailerID,
+        name,
+        icon,
+        mapArrow,
+        mapIcon,
+        tailColor,
+        tailPoints,
+        device,
+        simNumber,
+        model,
+        vin,
+        plateNumber,
+        odometerType,
+        engineHourType,
+        odometer,
+        engineHours,
+        fcr,
+        timeAdj,
+        accuracy,
+        false1,
+        false2,
+        paramAccvirt,
+        false3,
+        emptyString,
+        sensors,
+        emptyList,
+        emptyList1,
+        stringVariable,
+        active,
+        objectExpire,
+        objectExpireDate,
+      ];
+
+  VehicleSettingsModel.fromJson(List<dynamic> json)
+      : protocol = json[0] ?? '',
+        groupID = json[1] ?? '',
+        driverID = json[2] ?? '',
+        trailerID = json[3] ?? '',
+        name = json[4] ?? '',
+        icon = json[5] ?? '',
+        mapArrow = MapArrow.fromJson(json[6] ?? {}),
+        mapIcon = json[7] ?? '',
+        tailColor = json[8] ?? '',
+        tailPoints = json[9] ?? '',
+        device = json[10] ?? '',
+        simNumber = json[11] ?? '',
+        model = json[12] ?? '',
+        vin = json[13] ?? '',
+        plateNumber = json[14] ?? '',
+        odometerType = json[15] ?? '',
+        engineHourType = json[16] ?? '',
+        odometer = json[17] ?? '',
+        engineHours = json[18] ?? '',
+        fcr = FCR.fromJson(json[19] ?? {}),
+        timeAdj = json[20] ?? '',
+        accuracy = Accuracy.fromJson(json[21] ?? {}),
+        false1 = json[22] ?? 'false',
+        false2 = json[23] ?? 'false',
+        paramAccvirt = ParamAccvirt.fromJson(json[24] ?? {}),
+        false3 = json[25] ?? 'false',
+        emptyString = json[26] ?? '',
+        sensors = (json[27] is List && (json[27] as List).isEmpty)
+            ? {}
+            : (json[27] as Map<String, dynamic>?)?.map(
+                    (key, value) => MapEntry(key, Sensors.fromJson(value))) ??
+                {},
+        emptyList = json[28] ?? [],
+        emptyList1 = json[29],
+        stringVariable = json[30] ?? [],
+        active = json[31] == 'false' ? false : true,
+        objectExpire = json[32] == 'false' ? false : true,
+        objectExpireDate = json[33] ?? '';
+
+  static String parseDate(dynamic date) {
+    if (date == null || date.toString().isEmpty) {
+      return '0000-00-00';
+    }
+    try {
+      DateTime parsedDate = DateTime.parse(date.toString());
+      return parsedDate.toIso8601String();
+    } catch (e) {
+      return '0000-00-00';
+    }
+  }
+
+  VehicleSettingsModel(
+    this.protocol,
+    this.groupID,
+    this.driverID,
+    this.trailerID,
+    this.name,
+    this.icon,
+    this.mapArrow,
+    this.mapIcon,
+    this.tailColor,
+    this.tailPoints,
+    this.device,
+    this.simNumber,
+    this.model,
+    this.vin,
+    this.plateNumber,
+    this.odometerType,
+    this.engineHourType,
+    this.odometer,
+    this.engineHours,
+    this.fcr,
+    this.timeAdj,
+    this.accuracy,
+    this.false1,
+    this.false2,
+    this.paramAccvirt,
+    this.false3,
+    this.emptyString,
+    this.sensors,
+    this.emptyList,
+    this.emptyList1,
+    this.stringVariable,
+    this.active,
+    this.objectExpire,
+    this.objectExpireDate,
+  );
+}
+
+class StringVariable {
+  String? acc;
+  String? batteryLevel;
+  String? distance;
+  String? ignition;
+  String? motion;
+  String? rssi;
+  String? sat;
+  String? status;
+  String? totalDistance;
+
+  StringVariable(
+      {this.acc,
+      this.batteryLevel,
+      this.distance,
+      this.ignition,
+      this.motion,
+      this.rssi,
+      this.sat,
+      this.status,
+      this.totalDistance});
+
+  factory StringVariable.fromJson(Map<String, dynamic> json) {
+    return StringVariable(
+      acc: json['acc'],
+      batteryLevel: json['batteryLevel'],
+      distance: json['distance'],
+      ignition: json['ignition'],
+      motion: json['motion'],
+      rssi: json['rssi'],
+      sat: json['sat'],
+      status: json['status'],
+      totalDistance: json['totalDistance'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'acc': acc,
+      'batteryLevel': batteryLevel,
+      'distance': distance,
+      'ignition': ignition,
+      'motion': motion,
+      'rssi': rssi,
+      'sat': sat,
+      'status': status,
+      'totalDistance': totalDistance,
+    };
+  }
+}
+
+/*class CustomFields {
+  CustomFields({
+    this.name,
+    this.value,
+    this.dataList,
+    this.popup,
+  });
+
+  String name;
+  String value;
+  String dataList;
+  String popup;
+
+  factory CustomFields.fromJson(Map<String, dynamic> json) => CustomFields(
+        name: json["name"],
+        value: json["value"],
+        dataList: json["data_list"],
+        popup: json["popup"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "name": name,
+        "value": value,
+        "data_list": dataList,
+        "popup": popup,
+      };
+}*/
+/*
+class Service {
+  Service({
+    this.name,
+    this.dataList,
+    this.popup,
+    this.odo,
+    this.odoInterval,
+    this.odoLast,
+    this.engh,
+    this.enghInterval,
+    this.enghLast,
+    this.days,
+    this.daysInterval,
+    this.daysLast,
+    this.odoLeft,
+    this.odoLeftNum,
+    this.enghLeft,
+    this.enghLeftNum,
+    this.daysLeft,
+    this.daysLeftNum,
+    this.updateLast,
+  });
+
+  String name;
+  String dataList;
+  String popup;
+  String odo;
+  int odoInterval;
+  int odoLast;
+  String engh;
+  String enghInterval;
+  String enghLast;
+  String days;
+  String daysInterval;
+  String daysLast;
+  String odoLeft;
+  int odoLeftNum;
+  String enghLeft;
+  String enghLeftNum;
+  String daysLeft;
+  String daysLeftNum;
+  String updateLast;
+
+  factory Service.fromJson(Map<String, dynamic> json) => Service(
+        name: json["name"],
+        dataList: json["data_list"],
+        popup: json["popup"],
+        odo: json["odo"],
+        odoInterval: json["odo_interval"],
+        odoLast: json["odo_last"],
+        engh: json["engh"],
+        enghInterval: json["engh_interval"],
+        enghLast: json["engh_last"],
+        days: json["days"],
+        daysInterval: json["days_interval"],
+        daysLast: json["days_last"],
+        odoLeft: json["odo_left"],
+        odoLeftNum: json["odo_left_num"],
+        enghLeft: json["engh_left"],
+        enghLeftNum: json["engh_left_num"],
+        daysLeft: json["days_left"],
+        daysLeftNum: json["days_left_num"],
+        updateLast: json["update_last"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "name": name,
+        "data_list": dataList,
+        "popup": popup,
+        "odo": odo,
+        "odo_interval": odoInterval,
+        "odo_last": odoLast,
+        "engh": engh,
+        "engh_interval": enghInterval,
+        "engh_last": enghLast,
+        "days": days,
+        "days_interval": daysInterval,
+        "days_last": daysLast,
+        "odo_left": odoLeft,
+        "odo_left_num": odoLeftNum,
+        "engh_left": enghLeft,
+        "engh_left_num": enghLeftNum,
+        "days_left": daysLeft,
+        "days_left_num": daysLeftNum,
+        "update_last": updateLast,
+      };
+}*/
+
+class ParamAccvirt {
+  String? param;
+  String? accvirt1Cn;
+  String? accvirt0Cn;
+  int? accvirt1Val;
+  int? accvirt0Val;
+
+  ParamAccvirt({
+    this.param,
+    this.accvirt1Cn,
+    this.accvirt0Cn,
+    this.accvirt1Val,
+    this.accvirt0Val,
+  });
+
+  factory ParamAccvirt.fromJson(Map<String, dynamic> json) => ParamAccvirt(
+      param: json['param'],
+      accvirt1Cn: json['accvirt_1_cn'],
+      accvirt0Cn: json['accvirt_0_cn'],
+      accvirt1Val: json['accvirt_1_val'],
+      accvirt0Val: json['accvirt_0_val']);
+
+  Map<String, dynamic> toJson() => {
+        "param": param,
+        "accvirt_1_cn": accvirt1Cn,
+        "accvirt_0_cn": accvirt0Cn,
+        "accvirt_1_val": accvirt1Val,
+        "accvirt_0_val": accvirt0Val,
+      };
+}
+
+class Sensors {
+  Sensors({
+    this.name,
+    this.type,
+    this.param,
+    this.dataList,
+    this.popup,
+    this.resultType,
+    this.text1,
+    this.text0,
+    this.units,
+    this.lv,
+    this.hv,
+    this.accIgnore,
+    this.formula,
+    this.calibration,
+    this.dictionary,
+  });
+
+  String? name;
+  String? type;
+  String? param;
+  String? dataList;
+  String? popup;
+  String? resultType;
+  String? text1;
+  String? text0;
+  String? units;
+  String? lv;
+  String? hv;
+  String? accIgnore;
+  String? formula;
+  List<Calibration>? calibration;
+  List<Dictionary>? dictionary;
+
+  factory Sensors.fromJson(Map<String, dynamic> json) => Sensors(
+        name: json["name"],
+        type: json["type"],
+        param: json["param"],
+        dataList: json["data_list"],
+        popup: json["popup"],
+        resultType: json["result_type"],
+        text1: json["text_1"],
+        text0: json["text_0"],
+        units: json["units"],
+        lv: json["lv"],
+        hv: json["hv"],
+        accIgnore: json["acc_ignore"],
+        formula: json["formula"],
+        calibration: List<Calibration>.from(
+            json["calibration"].map((x) => Calibration.fromJson(x))),
+        dictionary: List<Dictionary>.from(
+            json["dictionary"].map((x) => Dictionary.fromJson(x))),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "name": name,
+        "type": type,
+        "param": param,
+        "data_list": dataList,
+        "popup": popup,
+        "result_type": resultType,
+        "text_1": text1,
+        "text_0": text0,
+        "units": units,
+        "lv": lv,
+        "hv": hv,
+        "acc_ignore": accIgnore,
+        "formula": formula,
+        "calibration": List<dynamic>.from(calibration!.map((x) => x.toJson())),
+        "dictionary": List<dynamic>.from(dictionary!.map((x) => x.toJson())),
+      };
+}
+
+class Calibration {
+  Calibration({
+    this.x,
+    this.y,
+  });
+
+  dynamic x;
+  dynamic y;
+
+  factory Calibration.fromJson(Map<String, dynamic> json) => Calibration(
+        x: json["x"],
+        y: json["y"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "x": x,
+        "y": y,
+      };
+}
+
+class Dictionary {
+  Dictionary({
+    this.value,
+    this.text,
+  });
+
+  dynamic value;
+  dynamic text;
+
+  factory Dictionary.fromJson(Map<String, dynamic> json) => Dictionary(
+        value: json["value"],
+        text: json["text"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "value": value,
+        "text": text,
+      };
+}
+
+class FCR {
+  String? source;
+  String? measurement;
+  String? cost;
+  String? summer;
+  String? winter;
+  String? winterStart;
+  String? winterEnd;
+
+  FCR({
+    this.source,
+    this.measurement,
+    this.cost,
+    this.summer,
+    this.winter,
+    this.winterStart,
+    this.winterEnd,
+  });
+
+  factory FCR.fromJson(Map<String, dynamic> json) => FCR(
+        source: json["source"].toString(),
+        measurement: json["measurement"].toString(),
+        cost: json["cost"].toString(),
+        summer: json["summer"].toString(),
+        winter: json["winter"].toString(),
+        winterStart: json["winter_start"].toString(),
+        winterEnd: json["winter_end"].toString(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "source": source,
+        "measurement": measurement,
+        "cost": cost,
+        "summer": summer,
+        "winter": winter,
+        "winter_start": winterStart,
+        "winter_end": winterEnd,
+      };
+}
+
+class MapArrow {
+  String? arrowNoConnection;
+  String? arrowStopped;
+  String? arrowMoving;
+  String? arrowEngineIdle;
+
+  MapArrow({
+    this.arrowNoConnection,
+    this.arrowStopped,
+    this.arrowMoving,
+    this.arrowEngineIdle,
+  });
+
+  factory MapArrow.fromJson(Map<String, dynamic> json) => MapArrow(
+        arrowNoConnection: json["arrow_no_connection"],
+        arrowStopped: json["arrow_stopped"],
+        arrowMoving: json["arrow_moving"],
+        arrowEngineIdle: json["arrow_engine_idle"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "arrow_no_connection": arrowNoConnection,
+        "arrow_stopped": arrowStopped,
+        "arrow_moving": arrowMoving,
+        "arrow_engine_idle": arrowEngineIdle,
+      };
+}
+
+class Accuracy {
+  Accuracy({
+    this.stops,
+    this.routeLenght,
+    this.minMovingSpeed,
+    this.minIdleSpeed,
+    this.minDiffPoints,
+    this.useGpslev,
+    this.minGpslev,
+    this.useHdop,
+    this.maxHdop,
+    this.ignFuelConsStops,
+    this.minFuelSpeed,
+    this.minFf,
+    this.minFt,
+  });
+
+  dynamic stops;
+  dynamic routeLenght;
+  dynamic minMovingSpeed;
+  dynamic minIdleSpeed;
+  dynamic minDiffPoints;
+  bool? useGpslev;
+  dynamic minGpslev;
+  bool? useHdop;
+  dynamic maxHdop;
+  bool? ignFuelConsStops;
+  dynamic minFuelSpeed;
+  dynamic minFf;
+  dynamic minFt;
+
+  factory Accuracy.fromJson(Map<String, dynamic> json) => Accuracy(
+        stops: json["stops"],
+        minMovingSpeed: json["min_moving_speed"],
+        minIdleSpeed: json["min_idle_speed"],
+        minDiffPoints: json["min_diff_points"],
+        useGpslev: json["use_gpslev"],
+        minGpslev: json["min_gpslev"],
+        useHdop: json["use_hdop"],
+        maxHdop: json["max_hdop"],
+        minFuelSpeed: json["min_fuel_speed"],
+        minFf: json["min_ff"],
+        minFt: json["min_ft"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "stops": stops,
+        "min_moving_speed": minMovingSpeed,
+        "min_idle_speed": minIdleSpeed,
+        "min_diff_points": minDiffPoints,
+        "use_gpslev": useGpslev,
+        "min_gpslev": minGpslev,
+        "use_hdop": useHdop,
+        "max_hdop": maxHdop,
+        "min_fuel_speed": minFuelSpeed,
+        "min_ff": minFf,
+        "min_ft": minFt,
+      };
+}
+/*
+
+
+class VehicleSettingsModel {
+  String name;
+  String zero1;
+  String zero2;
+  String zero3;
+  String logan;
+  String imgPath;
+  ArrowStatus arrowMap;
+  String arrow;
+  String colorCode;
+  String seven;
+  String device;
+  String simNumber;
+  String model;
+  String empty3;
+  String empty4;
+  String gps;
+  int off;
+  String odometer;
+  String zero4;
+  FCR fcr;
+  String empty5;
+  RouteSettings routeMap;
+  String false1;
+  String false2;
+  ParameterSettings paramMap;
+  String false3;
+  String empty6;
+  List<dynamic> emptyList1;
+  List<dynamic> emptyList2;
+  Map<String, dynamic> emptyList3;
+  // String emptyList3;
+  DataList dataList;
+  bool active;
+  bool false4;
+  String date;
+
+  VehicleSettingsModel({
+    this.name,
+    this.zero1,
+    this.zero2,
+    this.zero3,
+    this.logan,
+    this.imgPath,
+    this.arrowMap,
+    this.arrow,
+    this.colorCode,
+    this.seven,
+    this.device,
+    this.simNumber,
+    this.model,
+    this.empty3,
+    this.empty4,
+    this.gps,
+    this.off,
+    this.odometer,
+    this.zero4,
+    this.fcr,
+    this.empty5,
+    this.routeMap,
+    this.false1,
+    this.false2,
+    this.paramMap,
+    this.false3,
+    this.empty6,
+    this.emptyList1,
+    this.emptyList2,
+    this.emptyList3,
+    this.dataList,
+    this.active,
+    this.false4,
+    this.date,
+  });
+*/
+/*
+
+ List<dynamic> toJson() => [
+    name,
+    zero1,
+    zero2,
+    zero3,
+    logan,
+    imgPath,
+    arrowMap,
+    arrow,
+    colorCode,
+    seven,
+    device,
+    simNumber,
+    model,
+    empty3,
+    empty4,
+    gps,
+    off,
+    odometer,
+    zero4,
+    fcr,
+    empty5,
+    routeMap,
+    false1,
+    false2,
+    paramMap,
+    false3,
+    empty6,
+    emptyList1,
+    emptyList2,
+    emptyList3,
+    dataList,
+    active,
+    false4,
+    date,
+  ];
+*/ /*
+
+
+
+
+  VehicleSettingsModel.fromJson(List<dynamic> json)
+    : name = json[0],
+      zero1 = json[1],
+      zero2 = json[2],
+      zero3 = json[3],
+      logan = json[4],
+      imgPath = json[5],
+      arrowMap = ArrowStatus.fromJson(json[6]),
+      arrow = json[7],
+      colorCode = json[8],
+      seven = json[9],
+      device = json[10],
+      simNumber = json[11],
+      model = json[12],
+      empty3 = json[13],
+      empty4 = json[14],
+      gps = json[16],
+      off = json[18].toInt(),
+      fcr = FCR.fromJson(json[19]),
+      zero4 = json[20],
+        routeMap = RouteSettings.fromJson(json[21]),
+      empty5 = json[22],
+        odometer = json[23],
+
+        paramMap = ParameterSettings.fromJson(json[24]),
+      false2 = json[25],
+        false1 = json[26],
+
+      // false3 = json[27],
+      // empty6 = json[28],
+// emptyList1 = List<String>.from(json[29]).length > 0 ?  json[29] : 0,
+emptyList1 = json[29],
+      // emptyList2 = List<String>.from(json[30]).length > 0 ?  json[30] : 0,
+      // emptyList3 = List<String>.from(json[31]).length > 0 ?  json[31] : 0,
+      emptyList3 = json[31]
+
+      // dataList = DataList.fromJson(json[32]),
+      // active = json[33],
+      // false4 = json[34],
+      // date = json[35].toString();
+;
+
+
+  Map<String, dynamic> toJson() {
+    return {
+      'gt06': name,
+      'zero1': zero1,
+      'zero2': zero2,
+      'zero3': zero3,
+      'logan': logan,
+      'imgPath': imgPath,
+      'arrowMap': arrowMap,
+      'arrow': arrow,
+      'colorCode': colorCode,
+      'seven': seven,
+      'device': device,
+      'simNumber': simNumber,
+      'empty2': model,
+      'empty3': empty3,
+      'empty4': empty4,
+      'gps': gps,
+      'off': off,
+      'number': odometer,
+      'zero4': zero4,
+      'sourceMap': fcr,
+      'empty5': empty5,
+      'routeMap': routeMap,
+      'false1': false1,
+      'false2': false2,
+      'paramMap': paramMap,
+      'false3': false3,
+      'empty6': empty6,
+      'emptyList1': emptyList1,
+      'emptyList2': emptyList2,
+      'emptyList3': emptyList3,
+      'dataList': dataList,
+      'active': active,
+      'false4': false4,
+      'date': date,
+    };
+  }
+
+
+
+
+
+
+
+}
+
+class ArrowStatus {
+  String arrowNoConnection;
+  String arrowStopped;
+  String arrowMoving;
+  String arrowEngineIdle;
+
+  ArrowStatus({
+    this.arrowNoConnection,
+    this.arrowStopped,
+    this.arrowMoving,
+    this.arrowEngineIdle,
+  });
+
+  factory ArrowStatus.fromJson(Map<String, dynamic> json) {
+    return ArrowStatus(
+      arrowNoConnection: json['arrow_no_connection'],
+      arrowStopped: json['arrow_stopped'],
+      arrowMoving: json['arrow_moving'],
+      arrowEngineIdle: json['arrow_engine_idle'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'arrow_no_connection': arrowNoConnection,
+      'arrow_stopped': arrowStopped,
+      'arrow_moving': arrowMoving,
+      'arrow_engine_idle': arrowEngineIdle,
+    };
+  }
+}
+
+class FCR {
+  String source;
+  String measurement;
+  String cost;
+  String summer;
+  String winter;
+  String winterStart;
+  String winterEnd;
+
+  FCR({
+    this.source,
+    this.measurement,
+    this.cost,
+    this.summer,
+    this.winter,
+    this.winterStart,
+    this.winterEnd,
+  });
+
+  factory FCR.fromJson(Map<String, dynamic> json) {
+    return FCR(
+      source: json['source'] as String,
+      measurement: json['measurement'] as String,
+      cost: json['cost'] as String,
+      summer: json['summer'] as String,
+      winter: json['winter'] as String,
+      winterStart: json['winter_start'] as String,
+      winterEnd: json['winter_end'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'source': source,
+      'measurement': measurement,
+      'cost': cost,
+      'summer': summer,
+      'winter': winter,
+      'winter_start': winterStart,
+      'winter_end': winterEnd,
+    };
+  }
+}
+
+
+class RouteSettings {
+  String stops;
+  String routeLength;
+  String minMovingSpeed;
+  String minIdleSpeed;
+  String minDiffPoints;
+  bool useGpsLev;
+  String minGpsLev;
+  bool useHdop;
+  String maxHdop;
+  bool ignFuelConsStops;
+  String minFuelSpeed;
+  String minFf;
+  String minFt;
+
+  RouteSettings({
+    this.stops,
+    this.routeLength,
+    this.minMovingSpeed,
+    this.minIdleSpeed,
+    this.minDiffPoints,
+    this.useGpsLev,
+    this.minGpsLev,
+    this.useHdop,
+    this.maxHdop,
+    this.ignFuelConsStops,
+    this.minFuelSpeed,
+    this.minFf,
+    this.minFt,
+  });
+
+  factory RouteSettings.fromJson(Map<String, dynamic> json) {
+    return RouteSettings(
+      stops: json['stops'] as String,
+      routeLength: json['route_length'] as String,
+      minMovingSpeed: json['min_moving_speed'] as String,
+      minIdleSpeed: json['min_idle_speed'] as String,
+      minDiffPoints: json['min_diff_points'] as String,
+      useGpsLev: json['use_gpslev'] as bool,
+      minGpsLev: json['min_gpslev'] as String,
+      useHdop: json['use_hdop'] as bool,
+      maxHdop: json['max_hdop'] as String,
+      ignFuelConsStops: json['ign_fuel_cons_stops'] as bool,
+      minFuelSpeed: json['min_fuel_speed'] as String,
+      minFf: json['min_ff'] as String,
+      minFt: json['min_ft'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'stops': stops,
+      'route_length': routeLength,
+      'min_moving_speed': minMovingSpeed,
+      'min_idle_speed': minIdleSpeed,
+      'min_diff_points': minDiffPoints,
+      'use_gpslev': useGpsLev,
+      'min_gpslev': minGpsLev,
+      'use_hdop': useHdop,
+      'max_hdop': maxHdop,
+      'ign_fuel_cons_stops': ignFuelConsStops,
+      'min_fuel_speed': minFuelSpeed,
+      'min_ff': minFf,
+      'min_ft': minFt,
+    };
+  }
+}
+
+class ParameterSettings {
+  String param;
+  String accvirt1Cn;
+  String accvirt0Cn;
+  int accvirt1Val;
+  int accvirt0Val;
+
+  ParameterSettings({
+    this.param,
+    this.accvirt1Cn,
+    this.accvirt0Cn,
+    this.accvirt1Val,
+    this.accvirt0Val,
+  });
+
+  factory ParameterSettings.fromJson(Map<String, dynamic> json) {
+    return ParameterSettings(
+      param: json['param'] as String,
+      accvirt1Cn: json['accvirt_1_cn'] as String,
+      accvirt0Cn: json['accvirt_0_cn'] as String,
+      accvirt1Val: json['accvirt_1_val'] as int,
+      accvirt0Val: json['accvirt_0_val'] as int,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'param': param,
+      'accvirt_1_cn': accvirt1Cn,
+      'accvirt_0_cn': accvirt0Cn,
+      'accvirt_1_val': accvirt1Val,
+      'accvirt_0_val': accvirt0Val,
+    };
+  }
+}
+
+class DataList {
+  String acc;
+  String batteryLevel;
+  String distance;
+  String ignition;
+  String motion;
+  String rssi;
+  String sat;
+  String status;
+  String totalDistance;
+
+  DataList({
+    this.acc,
+    this.batteryLevel,
+    this.distance,
+    this.ignition,
+    this.motion,
+    this.rssi,
+    this.sat,
+    this.status,
+    this.totalDistance,
+  });
+
+  factory DataList.fromJson(Map<String, dynamic> json) {
+    return DataList(
+      acc: json['acc'] as String,
+      batteryLevel: json['batteryLevel'] as String,
+      distance: json['distance'] as String,
+      ignition: json['ignition'] as String,
+      motion: json['motion'] as String,
+      rssi: json['rssi'] as String,
+      sat: json['sat'] as String,
+      status: json['status'] as String,
+      totalDistance: json['totalDistance'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'acc': acc,
+      'batteryLevel': batteryLevel,
+      'distance': distance,
+      'ignition': ignition,
+      'motion': motion,
+      'rssi': rssi,
+      'sat': sat,
+      'status': status,
+      'totalDistance': totalDistance,
+    };
+  }
+}
+*/

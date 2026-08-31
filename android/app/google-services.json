@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "883633293769",
+    "project_id": "infinity-b44d7",
+    "storage_bucket": "infinity-b44d7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:883633293769:android:28b27b69f84849d9448018",
+        "android_client_info": {
+          "package_name": "com.infinity.track"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6NRl4zgvBEqwaJg_UGstpwrMRUiV15OI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
